@@ -1,0 +1,17 @@
+valkey:
+  query:
+    enabled: true
+    password:
+    request-timeout: 5000
+    connection-timeout: 5000
+    nodes:
+      - host:
+        port:
+
+spring:
+  application:
+    name: valkey-query-demo
+
+logging:
+  level:
+    root: INFO
