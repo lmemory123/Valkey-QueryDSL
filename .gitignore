@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### others ###
+doc/
+target/
+.serena/
+.mvn/
+.github/
