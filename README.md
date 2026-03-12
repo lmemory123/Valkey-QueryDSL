@@ -19,6 +19,8 @@
 - [项目介绍](docs/项目介绍.md)
 - [快速开始](docs/快速开始.md)
 - [使用指南](docs/使用指南.md)
+- [依赖说明](docs/依赖说明.md)
+- [技术架构](docs/技术架构.md)
 
 ## 示例工程
 
@@ -29,3 +31,7 @@
 ```bash
 mvn clean install
 ```
+
+## 开源协议
+
+本项目采用 [MIT License](LICENSE)。
