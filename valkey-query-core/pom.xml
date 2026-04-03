@@ -2,16 +2,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.momao</groupId>
+        <groupId>io.github.lmemory123</groupId>
         <artifactId>valkey-querydsl</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.1.0-RC1</version>
     </parent>
 
     <artifactId>valkey-query-core</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.momao</groupId>
+            <groupId>io.github.lmemory123</groupId>
             <artifactId>valkey-query-annotations</artifactId>
         </dependency>
         <dependency>

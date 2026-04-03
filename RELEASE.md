@@ -178,7 +178,9 @@ export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
 - `release` profile 会自动进行 GPG 签名
 - `central-publishing-maven-plugin` 会自动上传 bundle 到 Sonatype Central
 
-如果你需要显式指定 Maven：
+默认使用系统 `mvn`（按 `PATH` 解析）。
+
+如果你需要显式指定 Maven（路径或命令名）：
 
 ```bash
 ./scripts/release-publish.sh 1.0.1 3842D1364CE6DA1A /tmp/apache-maven-3.9.11/bin/mvn
@@ -432,11 +434,9 @@ export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
 ./scripts/release-publish.sh 1.1.0 3842D1364CE6DA1A
 ```
 
-默认使用：
+默认使用系统 `mvn`（按 `PATH` 解析）。
 
-- `/tmp/apache-maven-3.9.11/bin/mvn`
-
-如果你想手动指定 Maven：
+如果你想手动指定 Maven（路径或命令名）：
 
 ```bash
 ./scripts/release-publish.sh 1.1.0 3842D1364CE6DA1A /path/to/mvn

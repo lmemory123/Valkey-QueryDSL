@@ -2,15 +2,21 @@
 set -euo pipefail
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then
-  echo "Usage: scripts/release-publish.sh <release-version> <gpg-key-id> [maven-bin]" >&2
+  echo "Usage: scripts/release-publish.sh <release-version> <gpg-key-id> [maven-bin-or-command]" >&2
   exit 1
 fi
 
 RELEASE_VERSION="$1"
 GPG_KEY_ID="$2"
-MVN_BIN="${3:-/tmp/apache-maven-3.9.11/bin/mvn}"
+RAW_MVN_BIN="${3:-mvn}"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RELEASE_GROUP_ID="io.github.lmemory123"
+
+if [[ "$RAW_MVN_BIN" == */* ]]; then
+  MVN_BIN="$RAW_MVN_BIN"
+else
+  MVN_BIN="$(command -v "$RAW_MVN_BIN" || true)"
+fi
 
 if [[ "$RELEASE_VERSION" == *-SNAPSHOT ]]; then
   echo "Release version must not end with -SNAPSHOT." >&2
@@ -22,8 +28,8 @@ if [[ -z "${MAVEN_GPG_PASSPHRASE:-}" ]]; then
   exit 1
 fi
 
-if [[ ! -x "$MVN_BIN" ]]; then
-  echo "Maven binary not found or not executable: $MVN_BIN" >&2
+if [[ -z "${MVN_BIN:-}" || ! -x "$MVN_BIN" ]]; then
+  echo "Maven binary not found or not executable: $RAW_MVN_BIN" >&2
   exit 1
 fi
 

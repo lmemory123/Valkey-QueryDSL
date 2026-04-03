@@ -40,7 +40,7 @@ run_cluster() {
 
 bootstrap_modules() {
   cd "$ROOT_DIR"
-  "$RESOLVED_MAVEN_BIN" -B -ntp -pl valkey-query-test-example -am -Dmaven.test.skip=true clean install
+  "$RESOLVED_MAVEN_BIN" -B -ntp -pl valkey-query-test-example,valkey-query-processor -am -Dmaven.test.skip=true clean install
 }
 
 case "$MODE" in
