@@ -108,13 +108,13 @@ jobs:
       - name: Start cluster nodes
         run: |
           docker rm -f valkey-8000 valkey-8001 valkey-8002 >/dev/null 2>&1 || true
-          docker run -d --name valkey-8000 -p 8000:8000 -p 18000:18000 "$VALKEY_BUNDLE_IMAGE" \
+          docker run -d --name valkey-8000 --network host "$VALKEY_BUNDLE_IMAGE" \
             valkey-server --port 8000 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
             --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8000 --cluster-announce-bus-port 18000 --appendonly no
-          docker run -d --name valkey-8001 -p 8001:8001 -p 18001:18001 "$VALKEY_BUNDLE_IMAGE" \
+          docker run -d --name valkey-8001 --network host "$VALKEY_BUNDLE_IMAGE" \
             valkey-server --port 8001 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
             --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8001 --cluster-announce-bus-port 18001 --appendonly no
-          docker run -d --name valkey-8002 -p 8002:8002 -p 18002:18002 "$VALKEY_BUNDLE_IMAGE" \
+          docker run -d --name valkey-8002 --network host "$VALKEY_BUNDLE_IMAGE" \
             valkey-server --port 8002 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
             --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8002 --cluster-announce-bus-port 18002 --appendonly no
           sleep 8
@@ -123,6 +123,18 @@ jobs:
         run: |
           docker run --rm --network host "$VALKEY_BUNDLE_IMAGE" sh -lc \
             "yes yes | valkey-cli --cluster create 127.0.0.1:8000 127.0.0.1:8001 127.0.0.1:8002 --cluster-replicas 0"
+
+      - name: Wait for cluster to become ready
+        run: |
+          for i in $(seq 1 30); do
+            if docker run --rm --network host "$VALKEY_BUNDLE_IMAGE" sh -lc \
+              "valkey-cli -p 8000 cluster info | grep -q 'cluster_state:ok'"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker run --rm --network host "$VALKEY_BUNDLE_IMAGE" sh -lc "valkey-cli -p 8000 cluster info"
+          exit 1
 
       - name: Run cluster real tests
         run: |
