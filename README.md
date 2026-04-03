@@ -144,6 +144,14 @@ Page<Sku> page = skuRepository.queryChain()
 - 优先使用本地 `docker` 中的真实 Valkey 做验证
 - standalone、read_write_split、cluster 都以真实集成测试为准
 
+## 真实验证红线
+
+- 没有真实 Valkey 验证兜底的运行时能力，不算真正交付
+- 本地已有索引、已有数据、已有拓扑状态，不代表 CI 的 fresh 容器也会成立
+- 任何 Repository、索引治理、拓扑路由、批量写、聚合、Facet、向量查询改动，都必须补真实环境验证
+- 当前 GitHub Actions 使用的 bundle 基线镜像为 `ghcr.io/lmemory123/valkey-bundle:9.1.0`
+- 这份镜像是当前项目真实验证基线的一部分，不应随意替换为其他公开镜像
+
 ## 本地构建
 
 ```bash
@@ -153,12 +161,13 @@ mvn clean install
 ## 版本与坐标
 
 - Maven Central 已发布稳定版：`io.github.lmemory123:*:1.0.0`
-- 当前仓库源码快照：`com.momao:*:1.0.1-SNAPSHOT`
+- Maven Central 已发布候选版：`io.github.lmemory123:*:1.1.0-RC1`
+- 当前仓库源码快照：`com.momao:*:1.1.0-SNAPSHOT`
 
 如果你是第一次接入：
 
 - 想直接在业务项目里引用稳定版，按 [快速开始](/Users/momao/dm/java/demo/valkey-demo/docs/快速开始.md) 里的 Maven Central 坐标接入
-- 想验证当前工作区的最新代码，先在本仓库执行 `mvn clean install`，再在业务项目里引用 `com.momao:*:1.0.1-SNAPSHOT`
+- 想验证当前工作区的最新代码，先在本仓库执行 `mvn clean install`，再在业务项目里引用 `com.momao:*:1.1.0-SNAPSHOT`
 
 ## 自动化发版
 

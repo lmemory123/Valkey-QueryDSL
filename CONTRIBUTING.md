@@ -30,6 +30,8 @@ This default run is only a fast sanity check. Runtime correctness must be valida
 
 Runtime changes must be verified against a local Valkey instance with Search / JSON capability.
 
+No runtime feature counts as delivered until the affected real Valkey suites pass.
+
 Run them with:
 
 ```bash
@@ -48,6 +50,10 @@ Recommended real test commands are maintained in:
 
 - [docs/真实环境测试手册.md](/Users/momao/dm/java/demo/valkey-demo/docs/真实环境测试手册.md)
 - [docs/测试分层说明.md](/Users/momao/dm/java/demo/valkey-demo/docs/测试分层说明.md)
+
+CI uses the same runtime validation baseline image as the local project:
+
+- `ghcr.io/lmemory123/valkey-bundle:9.1.0`
 
 ## Pull Request Checklist
 

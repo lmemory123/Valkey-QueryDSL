@@ -4,7 +4,7 @@
 
 ## 当前发布结论
 
-当前仓库已经具备 Maven Central 发布能力，`1.0.0` 已成功发布。
+当前仓库已经具备 Maven Central 发布能力，`1.0.0` 已成功发布，`1.1.0-RC1` 也已成功发布。
 
 当前正式发布使用的关键前提如下：
 
@@ -15,6 +15,7 @@
 - 根 `pom.xml` 已配置 `release` profile
 - 仓库日常开发坐标仍保持为 `com.momao:*:*-SNAPSHOT`
 - 正式发布时由脚本临时切换到 `io.github.lmemory123`
+- GitHub Actions 的真实环境验证依赖 `ghcr.io/lmemory123/valkey-bundle:9.1.0`
 
 ## 发布产物
 
@@ -130,13 +131,13 @@ mvn -B -ntp clean test
 
 ### 3. 改成待发布版本
 
-例如把：
+例如把当前：
 
-- `1.0.1-SNAPSHOT`
+- `1.1.0-SNAPSHOT`
 
 改成：
 
-- `1.0.1`
+- `1.1.0`
 
 或：
 
