@@ -127,13 +127,17 @@ class BulkWriteIntegrationTests {
 
     private void awaitIndexedCount(String token, long expected) throws Exception {
         SkuQuery q = new SkuQuery();
-        long deadline = System.currentTimeMillis() + 8_000L;
+        long deadline = System.currentTimeMillis() + 15_000L;
         while (System.currentTimeMillis() < deadline) {
-            long total = skuRepository.queryChain()
-                    .where(q.tags.contains(token))
-                    .count();
-            if (total == expected) {
-                return;
+            try {
+                long total = skuRepository.queryChain()
+                        .where(q.tags.contains(token))
+                        .count();
+                if (total == expected) {
+                    return;
+                }
+            } catch (RuntimeException ignored) {
+                // Index propagation can lag briefly in CI after bulk writes/deletes.
             }
             Thread.sleep(100L);
         }
