@@ -30,7 +30,7 @@ jobs:
           cache: maven
 
       - name: Run unit and module tests
-        run: mvn -B -ntp clean test
+        run: mvn -B -ntp clean install -DskipITs
 
   real-standalone:
     name: Real Valkey Standalone (JDK 21)
