@@ -7,6 +7,7 @@ import com.momao.valkey.core.BulkWriteResult;
 import com.momao.valkey.core.NumericUpdateOperation;
 import com.momao.valkey.core.UpdateAssignment;
 import com.momao.valkey.core.UpdateOperationKind;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,11 @@ class BulkWriteIntegrationTests {
 
     @Autowired
     private SkuRepository skuRepository;
+
+    @BeforeEach
+    void ensureIndexExists() {
+        skuRepository.checkAndCreateIndex();
+    }
 
     @Test
     void saveAllAndDeleteAllWorkAgainstStandaloneValkey() throws Exception {
@@ -88,8 +94,6 @@ class BulkWriteIntegrationTests {
 
     @Test
     void updateAllWorksAgainstStandaloneValkey() throws Exception {
-        skuRepository.checkAndCreateIndex();
-
         String token = "bulkup" + UUID.randomUUID().toString().replace("-", "");
         Sku first = new Sku(token + "-1", "BulkUpdate-" + token + "-1", 1601, List.of("BULK_UPDATE", token), new Merchant("BU1", "A"));
         Sku second = new Sku(token + "-2", "BulkUpdate-" + token + "-2", 1602, List.of("BULK_UPDATE", token), new Merchant("BU2", "A"));
