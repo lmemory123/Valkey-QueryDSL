@@ -1,6 +1,7 @@
 package com.momao.valkey.adapter;
 
 import com.momao.valkey.annotation.StorageType;
+import com.momao.valkey.annotation.DistanceMetric;
 import com.momao.valkey.core.metadata.IndexSchema;
 import com.momao.valkey.core.metadata.SchemaField;
 import glide.api.models.commands.FT.FTCreateOptions;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 
 final class ExistingIndexInfo {
 
@@ -51,18 +53,70 @@ final class ExistingIndexInfo {
     }
 
     boolean matches(IndexSchema schema, FTCreateOptions.DataType expectedDataType) {
-        if (!Objects.equals(normalizeDataType(dataType), expectedDataType.name())) {
-            return false;
+        return diff(schema, expectedDataType).isEmpty();
+    }
+
+    IndexDiff diff(IndexSchema schema, FTCreateOptions.DataType expectedDataType) {
+        List<IndexDiffItem> items = new ArrayList<>();
+        String normalizedDataType = normalizeDataType(dataType);
+        if (!Objects.equals(normalizedDataType, expectedDataType.name())) {
+            items.add(new IndexDiffItem(
+                    IndexDiffType.DATA_TYPE_MISMATCH,
+                    schema.indexName(),
+                    expectedDataType.name(),
+                    normalizedDataType
+            ));
         }
-        if (!new LinkedHashSet<>(prefixes).equals(new LinkedHashSet<>(schema.prefixes()))) {
-            return false;
+
+        LinkedHashSet<String> expectedPrefixes = new LinkedHashSet<>(schema.prefixes());
+        LinkedHashSet<String> actualPrefixes = new LinkedHashSet<>(prefixes);
+        if (!expectedPrefixes.equals(actualPrefixes)) {
+            items.add(new IndexDiffItem(
+                    IndexDiffType.PREFIX_MISMATCH,
+                    schema.indexName(),
+                    String.join(",", expectedPrefixes),
+                    String.join(",", actualPrefixes)
+            ));
         }
 
         Map<String, ExistingFieldInfo> expectedFields = new LinkedHashMap<>();
         for (SchemaField field : schema.fields()) {
             expectedFields.put(field.fieldName(), ExistingFieldInfo.fromSchema(field, schema.storageType()));
         }
-        return expectedFields.equals(fields);
+
+        for (Map.Entry<String, ExistingFieldInfo> entry : expectedFields.entrySet()) {
+            ExistingFieldInfo actualField = fields.get(entry.getKey());
+            if (actualField == null) {
+                items.add(new IndexDiffItem(
+                        IndexDiffType.FIELD_MISSING,
+                        entry.getKey(),
+                        entry.getValue().summary(),
+                        null
+                ));
+                continue;
+            }
+            if (!entry.getValue().equals(actualField)) {
+                items.add(new IndexDiffItem(
+                        IndexDiffType.FIELD_DEFINITION_MISMATCH,
+                        entry.getKey(),
+                        entry.getValue().summary(),
+                        actualField.summary()
+                ));
+            }
+        }
+
+        for (Map.Entry<String, ExistingFieldInfo> entry : fields.entrySet()) {
+            if (expectedFields.containsKey(entry.getKey())) {
+                continue;
+            }
+            items.add(new IndexDiffItem(
+                    IndexDiffType.FIELD_UNEXPECTED,
+                    entry.getKey(),
+                    null,
+                    entry.getValue().summary()
+            ));
+        }
+        return IndexDiff.of(schema.indexName(), items);
     }
 
     private static IndexDefinition parseDefinition(Object value) {
@@ -95,6 +149,10 @@ final class ExistingIndexInfo {
         double weight = 1.0d;
         boolean noStem = false;
         boolean sortable = false;
+        Integer dimension = null;
+        DistanceMetric distanceMetric = null;
+        Integer m = null;
+        Integer efConstruction = null;
 
         for (int index = 0; index < items.length; index++) {
             String token = asString(items[index]);
@@ -127,11 +185,34 @@ final class ExistingIndexInfo {
                 }
                 case "nostem" -> noStem = true;
                 case "sortable" -> sortable = true;
+                case "dim" -> {
+                    if (index + 1 < items.length) {
+                        dimension = Integer.parseInt(asString(items[++index]));
+                    }
+                }
+                case "distance_metric" -> {
+                    if (index + 1 < items.length) {
+                        distanceMetric = DistanceMetric.valueOf(asString(items[++index]).toUpperCase(Locale.ROOT));
+                    }
+                }
+                case "m" -> {
+                    if (index + 1 < items.length) {
+                        m = Integer.parseInt(asString(items[++index]));
+                    }
+                }
+                case "ef_construction" -> {
+                    if (index + 1 < items.length) {
+                        efConstruction = Integer.parseInt(asString(items[++index]));
+                    }
+                }
                 default -> {
                 }
             }
         }
-        return new ExistingFieldInfo(alias, identifier, type, sortable, weight, noStem, separator);
+        if ("TAG".equals(type) && identifier != null && identifier.endsWith("[*]")) {
+            identifier = identifier.substring(0, identifier.length() - 3);
+        }
+        return new ExistingFieldInfo(alias, identifier, type, sortable, weight, noStem, separator, dimension, distanceMetric, m, efConstruction);
     }
 
     private static String normalizeDataType(String raw) {
@@ -146,6 +227,14 @@ final class ExistingIndexInfo {
     }
 
     private static Object[] toArray(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            List<Object> values = new ArrayList<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                values.add(entry.getKey());
+                values.add(entry.getValue());
+            }
+            return values.toArray();
+        }
         if (value instanceof Object[] values) {
             return values;
         }
@@ -160,6 +249,9 @@ final class ExistingIndexInfo {
     }
 
     private static String asString(Object value) {
+        if (value instanceof byte[] bytes) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
         return String.valueOf(value);
     }
 
@@ -175,8 +267,23 @@ final class ExistingIndexInfo {
         private final double weight;
         private final boolean noStem;
         private final String separator;
+        private final Integer dimension;
+        private final DistanceMetric distanceMetric;
+        private final Integer m;
+        private final Integer efConstruction;
 
-        private ExistingFieldInfo(String alias, String identifier, String type, boolean sortable, double weight, boolean noStem, String separator) {
+        private ExistingFieldInfo(
+                String alias,
+                String identifier,
+                String type,
+                boolean sortable,
+                double weight,
+                boolean noStem,
+                String separator,
+                Integer dimension,
+                DistanceMetric distanceMetric,
+                Integer m,
+                Integer efConstruction) {
             this.alias = alias;
             this.identifier = identifier;
             this.type = type;
@@ -184,10 +291,14 @@ final class ExistingIndexInfo {
             this.weight = weight;
             this.noStem = noStem;
             this.separator = separator == null || separator.isEmpty() ? "," : separator;
+            this.dimension = dimension;
+            this.distanceMetric = distanceMetric;
+            this.m = m;
+            this.efConstruction = efConstruction;
         }
 
         static ExistingFieldInfo fromSchema(SchemaField field, StorageType storageType) {
-            String identifier = storageType == StorageType.JSON ? "$." + field.jsonPath() : field.fieldName();
+            String identifier = storageType == StorageType.JSON ? "$." + normalizeJsonIdentifier(field) : field.fieldName();
             return new ExistingFieldInfo(
                     field.fieldName(),
                     identifier,
@@ -195,11 +306,36 @@ final class ExistingIndexInfo {
                     field.sortable(),
                     field.weight(),
                     field.noStem(),
-                    field.separator());
+                    field.separator(),
+                    field.vectorOptions() == null ? null : field.vectorOptions().dimension(),
+                    field.vectorOptions() == null ? null : field.vectorOptions().distanceMetric(),
+                    field.vectorOptions() == null ? null : field.vectorOptions().m(),
+                    field.vectorOptions() == null ? null : field.vectorOptions().efConstruction());
+        }
+
+        private static String normalizeJsonIdentifier(SchemaField field) {
+            if (field.type() == com.momao.valkey.annotation.FieldType.TAG && field.jsonPath().endsWith("[*]")) {
+                return field.jsonPath().substring(0, field.jsonPath().length() - 3);
+            }
+            return field.jsonPath();
         }
 
         String alias() {
             return alias;
+        }
+
+        String summary() {
+            return "alias=" + alias
+                    + ",identifier=" + identifier
+                    + ",type=" + type
+                    + ",sortable=" + sortable
+                    + ",weight=" + weight
+                    + ",noStem=" + noStem
+                    + ",separator=" + separator
+                    + ",dimension=" + dimension
+                    + ",distanceMetric=" + distanceMetric
+                    + ",m=" + m
+                    + ",efConstruction=" + efConstruction;
         }
 
         @Override
@@ -211,17 +347,21 @@ final class ExistingIndexInfo {
                 return false;
             }
             return sortable == that.sortable
-                    && Double.compare(that.weight, weight) == 0
+                    && Double.compare(weight, that.weight) == 0
                     && noStem == that.noStem
                     && Objects.equals(alias, that.alias)
                     && Objects.equals(identifier, that.identifier)
                     && Objects.equals(type, that.type)
-                    && Objects.equals(separator, that.separator);
+                    && Objects.equals(separator, that.separator)
+                    && Objects.equals(dimension, that.dimension)
+                    && Objects.equals(distanceMetric, that.distanceMetric)
+                    && Objects.equals(m, that.m)
+                    && Objects.equals(efConstruction, that.efConstruction);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(alias, identifier, type, sortable, weight, noStem, separator);
+            return Objects.hash(alias, identifier, type, sortable, weight, noStem, separator, dimension, distanceMetric, m, efConstruction);
         }
     }
 }

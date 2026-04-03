@@ -19,4 +19,14 @@ public final class ValkeySyntaxUtils {
     public static String escapeTag(String value) {
         return escape(value);
     }
+
+    public static String escapeWildcard(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\"", "\\\"");
+    }
 }

@@ -1,5 +1,6 @@
 package com.momao.valkey.example;
 
+import com.momao.valkey.core.Page;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,9 +41,21 @@ public class SkuController {
         return sku;
     }
 
-    @GetMapping("/all")
-    public Map<String, Sku> getAllSkus() {
-        return skuRepository.findAll();
+    @GetMapping("/page")
+    public Page<Sku> pageSkus(
+            @RequestParam(defaultValue = "0") int offset,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String title) {
+        SkuQuery q = new SkuQuery();
+        if (title != null && !title.isBlank()) {
+            return skuRepository.queryChain()
+                    .where(q.title.contains(title))
+                    .orderByAsc("price")
+                    .page(offset, limit);
+        }
+        return skuRepository.queryChain()
+                .orderByAsc("price")
+                .page(offset, limit);
     }
 
     @GetMapping("/search/premium")

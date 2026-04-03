@@ -123,4 +123,29 @@ class ExistingIndexInfoTests {
 
         assertTrue(indexInfo.matches(schema, FTCreateOptions.DataType.JSON));
     }
+
+    @Test
+    void detectsTextWeightMismatch() {
+        IndexSchema schema = new IndexSchema(
+                "idx:sku",
+                StorageType.JSON,
+                List.of("sku:"),
+                List.of(SchemaField.text("title", 2.5d, true, false))
+        );
+
+        Object[] response = new Object[]{
+                "index_definition", new Object[]{
+                "key_type", "JSON",
+                "prefixes", new Object[]{"sku:"}
+        },
+                "attributes", new Object[]{
+                new Object[]{"identifier", "$.title", "attribute", "title", "type", "TEXT", "WEIGHT", "1.0", "NOSTEM"}
+        }
+        };
+
+        ExistingIndexInfo indexInfo = ExistingIndexInfo.fromResponse(response);
+
+        assertFalse(indexInfo.matches(schema, FTCreateOptions.DataType.JSON));
+        assertFalse(indexInfo.diff(schema, FTCreateOptions.DataType.JSON).isEmpty());
+    }
 }

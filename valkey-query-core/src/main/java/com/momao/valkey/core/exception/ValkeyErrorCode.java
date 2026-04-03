@@ -1,0 +1,47 @@
+package com.momao.valkey.core.exception;
+
+public enum ValkeyErrorCode {
+
+    CONFIGURATION_ERROR("CONFIGURATION", "CONFIG_001"),
+    CONFIG_METADATA_LOAD_FAILED("CONFIGURATION", "CONFIG_002"),
+
+    CONNECTION_ERROR("CONNECTION", "CONNECTION_001"),
+    CONNECTION_CLIENT_CREATE_FAILED("CONNECTION", "CONNECTION_002"),
+    CONNECTION_CLUSTER_NODE_CREATE_FAILED("CONNECTION", "CONNECTION_003"),
+
+    INDEX_ERROR("INDEX", "INDEX_001"),
+    INDEX_VALIDATION_FAILED("INDEX", "INDEX_002"),
+    INDEX_CREATE_FAILED("INDEX", "INDEX_003"),
+    INDEX_READ_FAILED("INDEX", "INDEX_004"),
+    INDEX_RECREATE_FAILED("INDEX", "INDEX_005"),
+
+    QUERY_EXECUTION_ERROR("QUERY", "QUERY_001"),
+    QUERY_SAVE_FAILED("QUERY", "QUERY_002"),
+    QUERY_UPDATE_FAILED("QUERY", "QUERY_003"),
+    QUERY_SEARCH_FAILED("QUERY", "QUERY_004"),
+    QUERY_COUNT_FAILED("QUERY", "QUERY_005"),
+    QUERY_ENTITY_READ_FAILED("QUERY", "QUERY_006"),
+    QUERY_CLUSTER_REDIRECT_EXHAUSTED("QUERY", "QUERY_007"),
+    QUERY_AGGREGATE_FAILED("QUERY", "QUERY_008"),
+
+    RESULT_MAPPING_ERROR("MAPPING", "MAPPING_001"),
+    RESULT_ENTITY_ID_FILL_FAILED("MAPPING", "MAPPING_002"),
+    RESULT_SORT_FIELD_READ_FAILED("MAPPING", "MAPPING_003");
+
+    private final String category;
+
+    private final String code;
+
+    ValkeyErrorCode(String category, String code) {
+        this.category = category;
+        this.code = code;
+    }
+
+    public String category() {
+        return category;
+    }
+
+    public String code() {
+        return code;
+    }
+}

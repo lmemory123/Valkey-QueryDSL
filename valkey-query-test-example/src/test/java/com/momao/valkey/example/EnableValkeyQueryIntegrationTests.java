@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = ValkeyQueryDemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@EnabledIfEnvironmentVariable(named = "VALKEY_PASSWORD", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "VALKEY_INTEGRATION", matches = "true")
 class EnableValkeyQueryIntegrationTests {
 
     @Autowired

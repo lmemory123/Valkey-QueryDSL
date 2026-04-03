@@ -1,6 +1,6 @@
 package com.momao.valkey.core;
 
-public final class TextFieldBuilder {
+public final class TextFieldBuilder implements ValkeyFieldReference {
 
     private final String fieldName;
 
@@ -8,8 +8,13 @@ public final class TextFieldBuilder {
         this.fieldName = fieldName;
     }
 
+    @Override
+    public String fieldName() {
+        return fieldName;
+    }
+
     public SearchCondition eq(String value) {
-        return new SearchCondition("@" + fieldName + ":" + ValkeySyntaxUtils.escape(value));
+        return SearchCondition.textEquals(fieldName, value);
     }
 
     public SearchCondition matches(String pattern) {
@@ -36,6 +41,6 @@ public final class TextFieldBuilder {
     }
 
     public SearchCondition contains(String substring) {
-        return new SearchCondition("@" + fieldName + ":*" + ValkeySyntaxUtils.escape(substring) + "*");
+        return new SearchCondition("@" + fieldName + ":" + ValkeySyntaxUtils.escape(substring));
     }
 }

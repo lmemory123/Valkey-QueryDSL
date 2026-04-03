@@ -1,6 +1,6 @@
 package com.momao.valkey.core;
 
-public final class NumericFieldBuilder {
+public final class NumericFieldBuilder implements ValkeyFieldReference {
 
     private final String fieldName;
 
@@ -8,8 +8,13 @@ public final class NumericFieldBuilder {
         this.fieldName = fieldName;
     }
 
+    @Override
+    public String fieldName() {
+        return fieldName;
+    }
+
     public SearchCondition eq(Number value) {
-        return new SearchCondition("@" + fieldName + ":[" + value + " " + value + "]");
+        return SearchCondition.numericEquals(fieldName, value);
     }
 
     public SearchCondition gt(Number value) {

@@ -3,7 +3,7 @@ package com.momao.valkey.core;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-public final class TagFieldBuilder {
+public final class TagFieldBuilder implements ValkeyFieldReference {
 
     private final String fieldName;
 
@@ -11,8 +11,13 @@ public final class TagFieldBuilder {
         this.fieldName = fieldName;
     }
 
+    @Override
+    public String fieldName() {
+        return fieldName;
+    }
+
     public SearchCondition eq(String value) {
-        return new SearchCondition("@" + fieldName + ":{" + ValkeySyntaxUtils.escapeTag(value) + "}");
+        return SearchCondition.tagEquals(fieldName, value);
     }
 
     public SearchCondition contains(String value) {

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @SpringBootTest(classes = ValkeyQueryDemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@EnabledIfEnvironmentVariable(named = "VALKEY_PASSWORD", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "VALKEY_INTEGRATION", matches = "true")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SkuDeserializationTest {
 

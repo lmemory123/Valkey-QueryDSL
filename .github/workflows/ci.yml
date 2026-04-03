@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    name: Maven Test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [17, 21]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      - name: Run unit and module tests
+        run: mvn -B -ntp clean test
+
+  real-standalone:
+    name: Real Valkey Standalone (JDK 21)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Start standalone Valkey
+        run: |
+          docker rm -f valkey-bundle >/dev/null 2>&1 || true
+          docker run -d --name valkey-bundle -p 6379:6379 valkey-bundle:9.1.0
+          sleep 5
+
+      - name: Run standalone real tests
+        run: |
+          env VALKEY_INTEGRATION=true mvn -B -ntp -pl valkey-query-test-example -am \
+            -Dtest=EnableValkeyQueryIntegrationTests,GlideValkeyRepositoryIntegrationTests,BulkWriteIntegrationTests,IndexManagementIntegrationTests,SkuAdvancedIntegrationTest,SkuDeserializationTest,ValkeyComparisonTests,ProjectionIntegrationTests,AggregateIntegrationTests,VectorIntegrationTests \
+            -Dsurefire.failIfNoSpecifiedTests=false test
+
+  real-read-write-split:
+    name: Real Valkey Read/Write Split (JDK 21)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Start primary and replica
+        run: |
+          docker network inspect valkey-rw-net >/dev/null 2>&1 || docker network create valkey-rw-net
+          docker rm -f valkey-rw-primary valkey-rw-replica >/dev/null 2>&1 || true
+          docker run -d --name valkey-rw-primary --network valkey-rw-net -p 6381:6381 valkey-bundle:9.1.0 \
+            valkey-server --port 6381 --appendonly no
+          docker run -d --name valkey-rw-replica --network valkey-rw-net -p 6382:6382 valkey-bundle:9.1.0 \
+            valkey-server --port 6382 --replicaof valkey-rw-primary 6381 --appendonly no
+          sleep 5
+
+      - name: Run read/write split real tests
+        run: |
+          env VALKEY_RW_INTEGRATION=true mvn -B -ntp -pl valkey-query-test-example -am clean \
+            -Dtest=ReadWriteSplitIntegrationTests,ReadWriteSplitIndexManagementIntegrationTests,ReadWriteSplitVectorIntegrationTests \
+            -Dsurefire.failIfNoSpecifiedTests=false test
+
+  real-cluster:
+    name: Real Valkey Cluster (JDK 21)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Temurin 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Start cluster nodes
+        run: |
+          docker rm -f valkey-8000 valkey-8001 valkey-8002 >/dev/null 2>&1 || true
+          docker run -d --name valkey-8000 -p 8000:8000 -p 18000:18000 valkey-bundle:9.1.0 \
+            valkey-server --port 8000 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
+            --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8000 --cluster-announce-bus-port 18000 --appendonly no
+          docker run -d --name valkey-8001 -p 8001:8001 -p 18001:18001 valkey-bundle:9.1.0 \
+            valkey-server --port 8001 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
+            --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8001 --cluster-announce-bus-port 18001 --appendonly no
+          docker run -d --name valkey-8002 -p 8002:8002 -p 18002:18002 valkey-bundle:9.1.0 \
+            valkey-server --port 8002 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 \
+            --cluster-announce-ip 127.0.0.1 --cluster-announce-port 8002 --cluster-announce-bus-port 18002 --appendonly no
+          sleep 8
+
+      - name: Create cluster
+        run: |
+          docker run --rm --network host valkey-bundle:9.1.0 sh -lc \
+            "yes yes | valkey-cli --cluster create 127.0.0.1:8000 127.0.0.1:8001 127.0.0.1:8002 --cluster-replicas 0"
+
+      - name: Run cluster real tests
+        run: |
+          env VALKEY_CLUSTER_INTEGRATION=true mvn -B -ntp -pl valkey-query-test-example -am \
+            -Dtest=ClusterBulkWriteIntegrationTests,ClusterAggregateIntegrationTests,ClusterIndexManagementIntegrationTests,ClusterVectorIntegrationTests \
+            -Dsurefire.failIfNoSpecifiedTests=false test

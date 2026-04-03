@@ -1,12 +1,21 @@
 valkey:
   query:
     enabled: true
-    password:
+    username: ${VALKEY_USERNAME:}
+    password: ${VALKEY_PASSWORD:}
     request-timeout: 5000
     connection-timeout: 5000
+    observability:
+      enabled: ${VALKEY_OBSERVABILITY_ENABLED:true}
+      slow-log-enabled: ${VALKEY_OBSERVABILITY_SLOW_LOG_ENABLED:true}
+      async-slow-log-enabled: ${VALKEY_OBSERVABILITY_ASYNC_SLOW_LOG_ENABLED:true}
+      slow-query-threshold-ms: ${VALKEY_SLOW_QUERY_THRESHOLD_MS:200}
+      trace-query-text-enabled: ${VALKEY_OBSERVABILITY_TRACE_QUERY_TEXT_ENABLED:false}
+      slow-log-thread-name: ${VALKEY_OBSERVABILITY_SLOW_LOG_THREAD_NAME:valkey-query-slowlog}
+    mode: ${VALKEY_MODE:standalone}
     nodes:
-      - host:
-        port:
+      - host: ${VALKEY_HOST:localhost}
+        port: ${VALKEY_PORT:6379}
 
 spring:
   application:

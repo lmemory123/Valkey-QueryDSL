@@ -36,7 +36,7 @@ class StudentQueryTests {
     @Test
     void textFieldContains() {
         SearchCondition condition = qStudent.name.contains("ice");
-        assertEquals("@name:*ice*", condition.build());
+        assertEquals("@name:ice", condition.build());
     }
 
     @Test

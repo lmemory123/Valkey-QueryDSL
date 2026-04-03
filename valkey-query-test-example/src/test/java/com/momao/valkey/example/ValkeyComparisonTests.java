@@ -1,9 +1,10 @@
 package com.momao.valkey.example;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import glide.api.GlideClient;
-import glide.api.commands.servermodules.FT;
-import glide.api.models.commands.FT.FTSearchOptions;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.momao.valkey.adapter.ValkeyClientRouting;
+import com.momao.valkey.core.SearchCondition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +18,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(classes = ValkeyQueryDemoApplication.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@EnabledIfEnvironmentVariable(named = "VALKEY_PASSWORD", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "VALKEY_INTEGRATION", matches = "true")
 public class ValkeyComparisonTests {
 
     @Autowired
-    private GlideClient glideClient;
+    private ValkeyClientRouting clientRouting;
 
     @Autowired
     private SkuRepository skuRepository;
@@ -38,15 +39,15 @@ public class ValkeyComparisonTests {
         // 等待索引生效
         System.out.println("等待异步索引就绪...");
         boolean indexed = false;
-        FTSearchOptions checkOpts = FTSearchOptions.builder().limit(0, 1).build();
+        SearchCondition condition = new SkuQuery().id.eq(uniqueId);
         for (int i = 0; i < 50; i++) {
-            Object[] res = FT.search(glideClient, "idx:sku", "*", checkOpts).get();
-            if (res != null && res.length > 1) {
+            if (skuRepository.count(condition) > 0) {
                 indexed = true;
                 break;
             }
             Thread.sleep(200);
         }
+        assertTrue(indexed);
         
         System.out.println("\n>>> 开始执行对比测试 (ID: " + uniqueId + ")...");
 
@@ -67,11 +68,11 @@ public class ValkeyComparisonTests {
         // --- B. 原始方式 (模拟 JSON.GET + 手动映射) ---
         long startRaw = System.nanoTime();
         for (int i = 0; i < iterations; i++) {
-            Object rawJson = glideClient.customCommand(new String[]{"JSON.GET", "sku:" + uniqueId}).get();
+            Object rawJson = clientRouting.executeRead(new String[]{"JSON.GET", "sku:" + uniqueId});
             if (rawJson != null) {
                 Sku sku;
                 if (rawJson instanceof String js) {
-                    sku = objectMapper.readValue(js, Sku.class);
+                    sku = objectMapper.treeToValue(normalizeSkuJson(js), Sku.class);
                 } else {
                     sku = objectMapper.convertValue(rawJson, Sku.class);
                 }
@@ -107,5 +108,23 @@ public class ValkeyComparisonTests {
         report.append("\n================================================================================\n");
 
         System.out.println(report.toString());
+    }
+
+    private ObjectNode normalizeSkuJson(String json) throws Exception {
+        ObjectNode root = (ObjectNode) objectMapper.readTree(json);
+        if (root.has("tags") && root.get("tags").isTextual()) {
+            ArrayNode tags = objectMapper.createArrayNode();
+            String raw = root.get("tags").asText();
+            if (!raw.isBlank()) {
+                for (String item : raw.split(",")) {
+                    String trimmed = item.trim();
+                    if (!trimmed.isEmpty()) {
+                        tags.add(trimmed);
+                    }
+                }
+            }
+            root.set("tags", tags);
+        }
+        return root;
     }
 }

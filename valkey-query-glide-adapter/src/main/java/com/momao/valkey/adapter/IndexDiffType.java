@@ -1,0 +1,11 @@
+package com.momao.valkey.adapter;
+
+public enum IndexDiffType {
+    INDEX_MISSING,
+    INDEX_PARTIALLY_MISSING,
+    DATA_TYPE_MISMATCH,
+    PREFIX_MISMATCH,
+    FIELD_MISSING,
+    FIELD_UNEXPECTED,
+    FIELD_DEFINITION_MISMATCH
+}

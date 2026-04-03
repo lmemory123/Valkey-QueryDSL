@@ -2,6 +2,8 @@ package com.momao.valkey.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momao.valkey.core.SearchResult;
+import com.momao.valkey.core.exception.ValkeyErrorCode;
+import com.momao.valkey.core.exception.ValkeyResultMappingException;
 import com.momao.valkey.core.metadata.IndexSchema;
 
 import java.lang.reflect.Field;
@@ -11,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 final class ValkeyResultMapper<T> {
 
@@ -21,6 +24,8 @@ final class ValkeyResultMapper<T> {
     private final ObjectMapper objectMapper;
 
     private final ValkeyEntityOperations<T> entityOperations;
+
+    private volatile IdAccessor idAccessor;
 
     ValkeyResultMapper(
             IndexSchema schema,
@@ -44,8 +49,14 @@ final class ValkeyResultMapper<T> {
             return new SearchResult<>(total, records);
         }
 
-        if (response.length == 2 && response[1] instanceof Map<?, ?> documents) {
-            collectMappedDocuments(records, documents);
+        if (response.length == 2 && collectTopLevelDocuments(records, response[1])) {
+            return new SearchResult<>(total, records);
+        }
+
+        if (looksLikeTupleEntries(response)) {
+            for (int index = 1; index < response.length; index++) {
+                collectTupleDocument(records, response[index]);
+            }
             return new SearchResult<>(total, records);
         }
 
@@ -67,6 +78,63 @@ final class ValkeyResultMapper<T> {
         }
     }
 
+    private boolean collectTopLevelDocuments(List<T> records, Object candidate) {
+        if (candidate instanceof Map<?, ?> documents) {
+            collectMappedDocuments(records, documents);
+            return true;
+        }
+
+        Object[] values = toArray(candidate);
+        if (values.length == 0) {
+            return false;
+        }
+        if (isTupleEntry(values)) {
+            collectTupleDocument(records, values);
+            return true;
+        }
+
+        boolean handled = false;
+        for (Object value : values) {
+            if (isTupleEntry(value)) {
+                collectTupleDocument(records, value);
+                handled = true;
+            }
+        }
+        return handled;
+    }
+
+    private boolean looksLikeTupleEntries(Object[] response) {
+        if (response.length <= 1) {
+            return false;
+        }
+        for (int index = 1; index < response.length; index++) {
+            if (!isTupleEntry(response[index])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void collectTupleDocument(List<T> records, Object tupleCandidate) {
+        Object[] tuple = toArray(tupleCandidate);
+        if (tuple.length != 2) {
+            return;
+        }
+        T entity = toEntity(asString(tuple[0]), tuple[1]);
+        if (entity != null) {
+            records.add(entity);
+        }
+    }
+
+    private boolean isTupleEntry(Object candidate) {
+        Object[] tuple = toArray(candidate);
+        if (tuple.length != 2) {
+            return false;
+        }
+        Object key = tuple[0];
+        return !(key instanceof Map<?, ?>) && !(key instanceof List<?>) && !(key instanceof Object[]);
+    }
+
     private T toEntity(String docKey, Object rawDocument) {
         try {
             Map<String, Object> storedFields = toFieldMap(rawDocument);
@@ -77,7 +145,7 @@ final class ValkeyResultMapper<T> {
             injectDocumentId(entity, docKey);
             return entity;
         } catch (Exception exception) {
-            throw new IllegalStateException("结果映射失败: " + entityClass.getName(), exception);
+            throw new ValkeyResultMappingException(ValkeyErrorCode.RESULT_MAPPING_ERROR, "结果映射失败: " + entityClass.getName(), exception);
         }
     }
 
@@ -98,6 +166,13 @@ final class ValkeyResultMapper<T> {
             return docMap;
         }
 
+        if (fieldsArray.length == 1) {
+            Object[] nested = toArray(fieldsArray[0]);
+            if (nested.length > 0) {
+                fieldsArray = nested;
+            }
+        }
+
         for (int index = 0; index + 1 < fieldsArray.length; index += 2) {
             docMap.put(asString(fieldsArray[index]), normalizeValue(fieldsArray[index + 1]));
         }
@@ -105,41 +180,109 @@ final class ValkeyResultMapper<T> {
     }
 
     private void injectDocumentId(T entity, String docKey) {
-        if (docKey == null || !docKey.startsWith(schema.prefix())) {
+        String id = extractId(docKey);
+        if (id == null) {
             return;
         }
-
-        String id = docKey.substring(schema.prefix().length());
-        if (writeIdWithSetter(entity, id)) {
-            return;
-        }
-        writeIdWithField(entity, id);
+        writeId(entity, id);
     }
 
-    private boolean writeIdWithSetter(T entity, String id) {
+    private String extractId(String docKey) {
+        if (docKey == null) {
+            return null;
+        }
+        String matchedPrefix = null;
+        for (String prefix : schema.prefixes()) {
+            if (prefix != null && !prefix.isEmpty() && docKey.startsWith(prefix)
+                    && (matchedPrefix == null || prefix.length() > matchedPrefix.length())) {
+                matchedPrefix = prefix;
+            }
+        }
+        if (matchedPrefix != null) {
+            return docKey.substring(matchedPrefix.length());
+        }
+        String defaultPrefix = schema.prefix();
+        if (defaultPrefix != null && !defaultPrefix.isEmpty() && docKey.startsWith(defaultPrefix)) {
+            return docKey.substring(defaultPrefix.length());
+        }
+        return null;
+    }
+
+    private void writeId(T entity, String id) {
+        IdAccessor accessor = resolveIdAccessor();
+        if (accessor == null) {
+            return;
+        }
         try {
-            Method setter = entityClass.getMethod("setId", String.class);
-            setter.invoke(entity, id);
-            return true;
-        } catch (ReflectiveOperationException ignored) {
-            return false;
+            accessor.write(entity, convertId(id, accessor.targetType()));
+        } catch (ReflectiveOperationException exception) {
+            throw new ValkeyResultMappingException(ValkeyErrorCode.RESULT_ENTITY_ID_FILL_FAILED, "回填实体 ID 失败: " + entityClass.getName(), exception);
         }
     }
 
-    private void writeIdWithField(T entity, String id) {
+    private IdAccessor resolveIdAccessor() {
+        IdAccessor cached = idAccessor;
+        if (cached != null) {
+            return cached.isMissing() ? null : cached;
+        }
+        synchronized (this) {
+            cached = idAccessor;
+            if (cached != null) {
+                return cached.isMissing() ? null : cached;
+            }
+            idAccessor = discoverIdAccessor();
+            return idAccessor.isMissing() ? null : idAccessor;
+        }
+    }
+
+    private IdAccessor discoverIdAccessor() {
+        Method setter = findIdSetter();
+        if (setter != null) {
+            return IdAccessor.forSetter(setter);
+        }
+        Field field = findIdField();
+        if (field != null) {
+            return IdAccessor.forField(field);
+        }
+        return IdAccessor.missing();
+    }
+
+    private Method findIdSetter() {
+        Class<?> type = entityClass;
+        while (type != null && type != Object.class) {
+            try {
+                Method setter = type.getDeclaredMethod("setId", String.class);
+                setter.setAccessible(true);
+                return setter;
+            } catch (NoSuchMethodException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        type = entityClass;
+        while (type != null && type != Object.class) {
+            for (Method method : type.getDeclaredMethods()) {
+                if ("setId".equals(method.getName()) && method.getParameterCount() == 1) {
+                    method.setAccessible(true);
+                    return method;
+                }
+            }
+            type = type.getSuperclass();
+        }
+        return null;
+    }
+
+    private Field findIdField() {
         Class<?> type = entityClass;
         while (type != null && type != Object.class) {
             try {
                 Field field = type.getDeclaredField("id");
                 field.setAccessible(true);
-                field.set(entity, convertId(id, field.getType()));
-                return;
+                return field;
             } catch (NoSuchFieldException ignored) {
                 type = type.getSuperclass();
-            } catch (ReflectiveOperationException exception) {
-                throw new IllegalStateException("回填实体 ID 失败: " + entityClass.getName(), exception);
             }
         }
+        return null;
     }
 
     private Object convertId(String id, Class<?> targetType) {
@@ -182,4 +325,61 @@ final class ValkeyResultMapper<T> {
         return Long.parseLong(String.valueOf(value));
     }
 
+    private Object[] toArray(Object value) {
+        if (value instanceof Object[] values) {
+            return values;
+        }
+        if (value instanceof List<?> values) {
+            return values.toArray();
+        }
+        return value == null ? new Object[0] : new Object[]{value};
+    }
+
+    private static final class IdAccessor {
+
+        private final Method setter;
+
+        private final Field field;
+
+        private final Class<?> targetType;
+
+        private final boolean missing;
+
+        private IdAccessor(Method setter, Field field, Class<?> targetType, boolean missing) {
+            this.setter = setter;
+            this.field = field;
+            this.targetType = targetType;
+            this.missing = missing;
+        }
+
+        static IdAccessor forSetter(Method setter) {
+            return new IdAccessor(Objects.requireNonNull(setter), null, setter.getParameterTypes()[0], false);
+        }
+
+        static IdAccessor forField(Field field) {
+            return new IdAccessor(null, Objects.requireNonNull(field), field.getType(), false);
+        }
+
+        static IdAccessor missing() {
+            return new IdAccessor(null, null, String.class, true);
+        }
+
+        boolean isMissing() {
+            return missing;
+        }
+
+        Class<?> targetType() {
+            return targetType;
+        }
+
+        void write(Object entity, Object value) throws ReflectiveOperationException {
+            if (setter != null) {
+                setter.invoke(entity, value);
+                return;
+            }
+            if (field != null) {
+                field.set(entity, value);
+            }
+        }
+    }
 }

@@ -42,6 +42,11 @@
 - 支持 `StorageType.JSON` 和 `StorageType.HASH`
 - 支持 `list`、`page`、`one`、`count`
 - 支持链式查询 `ValkeyQueryChain`
+- 支持基础聚合链 `ValkeyAggregateChain`
+- 支持 Facet 快捷链 `ValkeyFacetChain`
+- 支持多字段独立 Facet 结果 `FacetResults`
+- 支持聚合结果映射 `AggregateResult.mapRows(...)`
+- 支持 `AggregateExpressions` 轻量表达式 DSL
 - 支持集合字段和嵌套对象
 - 支持 Spring Boot 自动建索引
 - 支持 Glide 运行时适配
@@ -125,16 +130,46 @@ Page<Sku> page = skuRepository.queryChain()
 - [使用指南](docs/使用指南.md)
 - [依赖说明](docs/依赖说明.md)
 - [技术架构](docs/技术架构.md)
+- [真实环境测试手册](docs/真实环境测试手册.md)
+- [测试分层说明](docs/测试分层说明.md)
+- [发布指南](RELEASE.md)
 
 ## 示例工程
 
 - `valkey-query-test-example`
+
+## 测试原则
+
+- 不以 Mockito 结果作为正确性结论
+- 优先使用本地 `docker` 中的真实 Valkey 做验证
+- standalone、read_write_split、cluster 都以真实集成测试为准
 
 ## 本地构建
 
 ```bash
 mvn clean install
 ```
+
+## 版本与坐标
+
+- Maven Central 已发布稳定版：`io.github.lmemory123:*:1.0.0`
+- 当前仓库源码快照：`com.momao:*:1.0.1-SNAPSHOT`
+
+如果你是第一次接入：
+
+- 想直接在业务项目里引用稳定版，按 [快速开始](/Users/momao/dm/java/demo/valkey-demo/docs/快速开始.md) 里的 Maven Central 坐标接入
+- 想验证当前工作区的最新代码，先在本仓库执行 `mvn clean install`，再在业务项目里引用 `com.momao:*:1.0.1-SNAPSHOT`
+
+## 自动化发版
+
+仓库已经提供本地发版脚本和 GitHub Release 自动化：
+
+- 本地发布到 Maven Central：[`scripts/release-publish.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-publish.sh)
+- 发布后创建并推送 tag：[`scripts/release-tag.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-tag.sh)
+- 切回下一个开发快照：[`scripts/release-start-next.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-start-next.sh)
+- GitHub tag 自动生成 Release：[`release.yml`](/Users/momao/dm/java/demo/valkey-demo/.github/workflows/release.yml)
+
+完整流程见 [发布指南](/Users/momao/dm/java/demo/valkey-demo/RELEASE.md)。
 
 ## 开源协议
 

@@ -7,9 +7,11 @@ import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
 import com.momao.valkey.annotation.ValkeyIndexed;
 import com.momao.valkey.annotation.ValkeySearchable;
+import com.momao.valkey.annotation.ValkeyVector;
 import com.momao.valkey.core.NumericFieldBuilder;
 import com.momao.valkey.core.TagFieldBuilder;
 import com.momao.valkey.core.TextFieldBuilder;
+import com.momao.valkey.core.VectorFieldBuilder;
 import com.momao.valkey.core.metadata.IndexSchema;
 import com.momao.valkey.core.metadata.SchemaField;
 import com.squareup.javapoet.ClassName;
@@ -72,9 +74,11 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         ClassName textFieldBuilderClass = ClassName.get(TextFieldBuilder.class);
         ClassName numericFieldBuilderClass = ClassName.get(NumericFieldBuilder.class);
         ClassName tagFieldBuilderClass = ClassName.get(TagFieldBuilder.class);
+        ClassName vectorFieldBuilderClass = ClassName.get(VectorFieldBuilder.class);
         ClassName indexSchemaClass = ClassName.get(IndexSchema.class);
         ClassName schemaFieldClass = ClassName.get(SchemaField.class);
         ClassName storageTypeClass = ClassName.get(StorageType.class);
+        ClassName distanceMetricClass = ClassName.get("com.momao.valkey.annotation", "DistanceMetric");
 
         TypeSpec.Builder queryTypeBuilder = TypeSpec.classBuilder(generatedName)
                 .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
@@ -87,7 +91,7 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
 
         StorageType storageType = document.storageType();
         List<QueryNode> queryNodes = collectQueryNodes(typeElement, storageType, List.of(), List.of(), new LinkedHashSet<>());
-        addQueryMembers(queryTypeBuilder, queryNodes, textFieldBuilderClass, numericFieldBuilderClass, tagFieldBuilderClass);
+        addQueryMembers(queryTypeBuilder, queryNodes, textFieldBuilderClass, numericFieldBuilderClass, tagFieldBuilderClass, vectorFieldBuilderClass);
         List<FieldInfo> fieldInfos = flattenFieldInfos(queryNodes);
 
         String indexName = document.indexName().isEmpty()
@@ -167,6 +171,30 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
                                 fieldInfo.sortable());
                     }
                 }
+                case VECTOR -> {
+                    if (fieldInfo.alias().equals(fieldInfo.jsonPath())) {
+                        fieldsInitBuilder.add(
+                                "    $T.vector($S, $L, $T.$L, $L, $L)",
+                                schemaFieldClass,
+                                fieldInfo.alias(),
+                                fieldInfo.dimension(),
+                                distanceMetricClass,
+                                fieldInfo.distanceMetric().name(),
+                                fieldInfo.m(),
+                                fieldInfo.efConstruction());
+                    } else {
+                        fieldsInitBuilder.add(
+                                "    $T.vector($S, $S, $L, $T.$L, $L, $L)",
+                                schemaFieldClass,
+                                fieldInfo.alias(),
+                                fieldInfo.jsonPath(),
+                                fieldInfo.dimension(),
+                                distanceMetricClass,
+                                fieldInfo.distanceMetric().name(),
+                                fieldInfo.m(),
+                                fieldInfo.efConstruction());
+                    }
+                }
             }
         }
         fieldsInitBuilder.add("\n)");
@@ -238,8 +266,9 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         ValkeyId id = field.getAnnotation(ValkeyId.class);
         ValkeySearchable searchable = field.getAnnotation(ValkeySearchable.class);
         ValkeyIndexed indexed = field.getAnnotation(ValkeyIndexed.class);
+        ValkeyVector vector = field.getAnnotation(ValkeyVector.class);
 
-        int annotationCount = countNonNull(id, searchable, indexed);
+        int annotationCount = countNonNull(id, searchable, indexed, vector);
         if (annotationCount == 0) {
             return null;
         }
@@ -300,21 +329,44 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         ValkeyId id = field.getAnnotation(ValkeyId.class);
         ValkeySearchable searchable = field.getAnnotation(ValkeySearchable.class);
         ValkeyIndexed indexed = field.getAnnotation(ValkeyIndexed.class);
+        ValkeyVector vector = field.getAnnotation(ValkeyVector.class);
 
         String javaFieldName = field.getSimpleName().toString();
 
         if (id != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, "", field, storageType, propertySegments, aliasSegments);
-            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TAG, true, 1.0d, false);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TAG, true, 1.0d, false, 0, null, 0, 0);
         }
         if (searchable != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, searchable.value(), field, storageType, propertySegments, aliasSegments);
-            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TEXT, searchable.sortable(), searchable.weight(), searchable.noStem());
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TEXT, searchable.sortable(), searchable.weight(), searchable.noStem(), 0, null, 0, 0);
         }
         if (indexed != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, indexed.value(), field, storageType, propertySegments, aliasSegments);
             FieldType fieldType = inferFieldType(field.asType());
-            return new FieldInfo(mapping.alias(), mapping.jsonPath(), fieldType, indexed.sortable(), 1.0d, false);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), fieldType, indexed.sortable(), 1.0d, false, 0, null, 0, 0);
+        }
+        if (vector != null) {
+            if (storageType != StorageType.JSON) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "向量字段当前仅支持 JSON 存储", field);
+                return null;
+            }
+            if (!isSupportedVectorType(field.asType())) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "向量字段当前仅支持 float[] 或 double[]", field);
+                return null;
+            }
+            NameMapping mapping = resolveNameMapping(javaFieldName, vector.value(), field, storageType, propertySegments, aliasSegments);
+            return new FieldInfo(
+                    mapping.alias(),
+                    mapping.jsonPath(),
+                    FieldType.VECTOR,
+                    false,
+                    1.0d,
+                    false,
+                    vector.dimension(),
+                    vector.distanceMetric(),
+                    vector.m(),
+                    vector.efConstruction());
         }
         return null;
     }
@@ -364,13 +416,15 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
             List<QueryNode> queryNodes,
             ClassName textFieldBuilderClass,
             ClassName numericFieldBuilderClass,
-            ClassName tagFieldBuilderClass) {
+            ClassName tagFieldBuilderClass,
+            ClassName vectorFieldBuilderClass) {
         for (QueryNode queryNode : queryNodes) {
             if (queryNode instanceof LeafNode leafNode) {
                 ClassName builderClass = switch (leafNode.fieldInfo().fieldType()) {
                     case TAG -> tagFieldBuilderClass;
                     case NUMERIC -> numericFieldBuilderClass;
                     case TEXT -> textFieldBuilderClass;
+                    case VECTOR -> vectorFieldBuilderClass;
                 };
                 typeBuilder.addField(FieldSpec.builder(builderClass, leafNode.memberName(), Modifier.PUBLIC, Modifier.FINAL)
                         .initializer("new $T($S)", builderClass, leafNode.fieldInfo().alias())
@@ -382,7 +436,7 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
             TypeSpec.Builder nestedTypeBuilder = TypeSpec.classBuilder(objectNode.typeName())
                     .addModifiers(Modifier.PUBLIC, Modifier.STATIC, Modifier.FINAL)
                     .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC).build());
-            addQueryMembers(nestedTypeBuilder, objectNode.children(), textFieldBuilderClass, numericFieldBuilderClass, tagFieldBuilderClass);
+            addQueryMembers(nestedTypeBuilder, objectNode.children(), textFieldBuilderClass, numericFieldBuilderClass, tagFieldBuilderClass, vectorFieldBuilderClass);
             typeBuilder.addType(nestedTypeBuilder.build());
             ClassName nestedTypeClass = ClassName.bestGuess(objectNode.typeName());
             typeBuilder.addField(FieldSpec.builder(nestedTypeClass, objectNode.memberName(), Modifier.PUBLIC, Modifier.FINAL)
@@ -432,7 +486,13 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
     private boolean hasIndexedAnnotation(VariableElement field) {
         return field.getAnnotation(ValkeyId.class) != null
                 || field.getAnnotation(ValkeySearchable.class) != null
-                || field.getAnnotation(ValkeyIndexed.class) != null;
+                || field.getAnnotation(ValkeyIndexed.class) != null
+                || field.getAnnotation(ValkeyVector.class) != null;
+    }
+
+    private boolean isSupportedVectorType(TypeMirror type) {
+        String typeName = type.toString();
+        return "float[]".equals(typeName) || "double[]".equals(typeName);
     }
 
     private boolean isNumericType(TypeMirror type) {
@@ -515,7 +575,17 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
     private record NameMapping(String alias, String jsonPath) {
     }
 
-    private record FieldInfo(String alias, String jsonPath, FieldType fieldType, boolean sortable, double weight, boolean noStem) {
+    private record FieldInfo(
+            String alias,
+            String jsonPath,
+            FieldType fieldType,
+            boolean sortable,
+            double weight,
+            boolean noStem,
+            int dimension,
+            com.momao.valkey.annotation.DistanceMetric distanceMetric,
+            int m,
+            int efConstruction) {
     }
 
     private sealed interface QueryNode permits LeafNode, ObjectNode {
