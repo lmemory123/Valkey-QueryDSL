@@ -128,20 +128,27 @@ class BulkWriteIntegrationTests {
     private void awaitIndexedCount(String token, long expected) throws Exception {
         SkuQuery q = new SkuQuery();
         long deadline = System.currentTimeMillis() + 15_000L;
+        RuntimeException lastError = null;
+        Long lastObserved = null;
         while (System.currentTimeMillis() < deadline) {
             try {
                 long total = skuRepository.queryChain()
                         .where(q.tags.contains(token))
                         .count();
+                lastObserved = total;
                 if (total == expected) {
                     return;
                 }
-            } catch (RuntimeException ignored) {
+                lastError = null;
+            } catch (RuntimeException ex) {
                 // Index propagation can lag briefly in CI after bulk writes/deletes.
+                lastError = ex;
             }
             Thread.sleep(100L);
         }
-        long actual = skuRepository.queryChain().where(q.tags.contains(token)).count();
-        assertTrue(actual == expected, "expected=" + expected + ", actual=" + actual);
+        String detail = lastError != null
+                ? "lastError=" + lastError.getMessage()
+                : "lastObserved=" + lastObserved;
+        assertTrue(false, "expected=" + expected + ", " + detail);
     }
 }
