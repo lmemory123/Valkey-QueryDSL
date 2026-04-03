@@ -17,7 +17,15 @@ fi
 
 cd "$ROOT_DIR"
 
-CURRENT_VERSION="$(sed -n 's|.*<version>\\(.*\\)</version>.*|\\1|p' pom.xml | head -n 1)"
+CURRENT_VERSION="$(
+python3 - <<'PY'
+from pathlib import Path
+import re
+text = Path('pom.xml').read_text()
+match = re.search(r'<version>(.*?)</version>', text, re.S)
+print(match.group(1).strip() if match else '')
+PY
+)"
 if [[ "$CURRENT_VERSION" != "$RELEASE_VERSION" ]]; then
   echo "Current pom version ($CURRENT_VERSION) does not match release version ($RELEASE_VERSION)." >&2
   exit 1
