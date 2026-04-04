@@ -1,25 +1,35 @@
 # 发布指南
 
-本文档用于说明 `Valkey QueryDSL` 如何手动发布到 Maven Central，以及 `RC` / 正式版发布时需要注意的事项。
+这份文档只回答 3 件事：
 
-## 当前发布结论
+- 先发到哪里
+- 每一步先做什么后做什么
+- 这次已经踩过哪些坑，以后不要再踩
 
-当前仓库已经具备 Maven Central 发布能力，`1.0.0` 已成功发布，`1.1.0-RC1` 也已成功发布。
+一句话结论：
 
-当前正式发布使用的关键前提如下：
+- **先发 Maven Central**
+- **Central 成功后再打 Git tag**
+- **Git tag 推上去后，GitHub Release 会自动生成**
 
-- `groupId`: `io.github.lmemory123`
-- Central Portal 命名空间已开通
-- `~/.m2/settings.xml` 已配置 `central` server token
-- 本机已配置 GPG 密钥并可用于 Maven 签名
-- 根 `pom.xml` 已配置 `release` profile
-- 仓库日常开发坐标仍保持为 `com.momao:*:*-SNAPSHOT`
-- 正式发布时由脚本临时切换到 `io.github.lmemory123`
-- GitHub Actions 的真实环境验证依赖 `ghcr.io/lmemory123/valkey-bundle:9.1.0`
+不要反过来做。  
+如果先打 tag、先出 GitHub Release，而 Central 最后失败，外部看到的版本状态就会错乱。
 
-## 发布产物
+## 当前发布基线
 
-会发布到 Central 的模块：
+当前仓库的发布基线如下：
+
+- 开发态坐标：`com.momao:*:1.1.0-SNAPSHOT`
+- 发布态坐标：`io.github.lmemory123:*:<release-version>`
+- 稳定版：`1.0.0`
+- 当前候选版：`1.1.0-RC3`
+- GitHub Actions 真实验证镜像：`ghcr.io/lmemory123/valkey-bundle:9.1.0`
+- 推荐 Maven：`3.9.x`
+- 当前可用发布 key：`8ACEA513E5F728CC`
+
+## 会发布哪些模块
+
+会发布到 Maven Central：
 
 - `io.github.lmemory123:valkey-query-annotations`
 - `io.github.lmemory123:valkey-query-core`
@@ -27,21 +37,15 @@
 - `io.github.lmemory123:valkey-query-glide-adapter`
 - `io.github.lmemory123:valkey-query-spring-boot-starter`
 
-不会发布到 Central 的模块：
+不会发布到 Maven Central：
 
 - `valkey-query-test-example`
 
-原因：
-
-- 该模块只用于示例和集成测试
-- 已设置 `maven.deploy.skip=true`
-- 已设置 `skipPublishing=true`
-
 ## 发布前提
 
-### 1. Sonatype Central Token
+### 1. Central Token
 
-`~/.m2/settings.xml` 中需要存在：
+`~/.m2/settings.xml` 里必须有：
 
 ```xml
 <server>
@@ -53,405 +57,308 @@
 
 ### 2. GPG 密钥
 
-仓库使用 `maven-gpg-plugin` 进行签名。
-
-推荐生成方式：
-
-```bash
-gpg --full-generate-key
-```
-
-推荐参数：
-
-- key type: `RSA and RSA`
-- key size: `4096`
-- expiration: `0`
-
-查看密钥：
+查看可用 key：
 
 ```bash
 gpg --list-secret-keys --keyid-format LONG
 ```
 
-发布时需要导出口令环境变量：
+发布前建议用这条先验签：
 
 ```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
+MAVEN_GPG_PASSPHRASE='你的口令' /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn -B -ntp -Prelease -Dgpg.keyname=8ACEA513E5F728CC -DskipTests verify
 ```
 
-如需指定签名 key：
+只要这里 `BUILD SUCCESS`，说明：
 
-```bash
--Dgpg.keyname=YOUR_KEY_ID
-```
+- GPG key 可用
+- 口令是对的
+- `release` profile 能正常签名
 
 ### 3. Maven 版本
 
-当前仓库发布时，**推荐使用 Maven 3.9.x**。
+当前项目正式发布时，**只推荐 Maven 3.9.x**。
 
-说明：
+原因：
 
-- 当前本机默认 Maven 4.0.0-rc-5 在本项目里无法稳定触发 `central-publishing-maven-plugin` 的自动 `deploy` 生命周期注入
-- 实际成功发布 `1.0.0` 时使用的是 Maven `3.9.11`
+- Maven 4 可以做本地 `verify`
+- 但这个项目之前真实发布到 Central，稳定成功的是 Maven 3.9.x
+- Maven 4 在 `central-publishing-maven-plugin` 这条链上不够稳
 
-推荐检查：
-
-```bash
-mvn -version
-```
-
-如果本机默认不是 Maven 3.9.x，可以显式使用指定版本：
+推荐直接用：
 
 ```bash
-/tmp/apache-maven-3.9.11/bin/mvn -version
+/Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn -version
 ```
 
-## 手动发布流程
+### 4. 真实环境验证
 
-### 1. 确认工作区状态
-
-发布前建议：
-
-- 当前分支无未确认改动
-- 版本号已确认
-- `CHANGELOG.md` 已更新
-- `README.md` 中依赖版本示例已同步
-
-### 2. 先跑一次本地校验
+发布前必须跑真实 Valkey 测试：
 
 ```bash
-mvn -B -ntp clean test
+./scripts/run-real-tests.sh all
 ```
 
-如果你要和正式发布环境完全对齐，建议再跑一遍：
+不接受只跑 mock 或纯模型测试就发版。
+
+## 标准发布顺序
+
+### 第 1 步：确认当前是开发态
+
+检查根 `pom.xml`：
 
 ```bash
-/tmp/apache-maven-3.9.11/bin/mvn -B -ntp clean test
+grep -n "<version>" pom.xml | head -n 1
 ```
 
-### 3. 改成待发布版本
+正常应该是：
 
-例如把当前：
+```xml
+<version>1.1.0-SNAPSHOT</version>
+```
 
-- `1.1.0-SNAPSHOT`
+### 第 2 步：发布到 Maven Central
 
-改成：
+这是第一优先级，必须先做。
 
-- `1.1.0`
-
-或：
-
-- `1.1.0-RC1`
-
-注意：
-
-- 所有子模块版本都要保持一致
-- Central 是不可变仓库，**同一版本号不能重复发布**
-
-### 4. 设置 GPG 口令环境变量
+示例，发布 `1.1.0-RC3`：
 
 ```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
+cd /Users/momao/dm/java/demo/valkey-demo
+MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC3 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
 ```
 
-### 5. 执行正式发布
+这个脚本会自动做这些事：
 
-推荐命令：
+- 把版本切到 `1.1.0-RC3`
+- 把 `groupId` 从 `com.momao` 临时切到 `io.github.lmemory123`
+- 先跑 `./scripts/run-real-tests.sh all`
+- 用 `release` profile 打包、签名、上传
+- 等待 Sonatype Central 最终状态变成 `PUBLISHED`
+- 结束后把源码切回 `1.1.0-SNAPSHOT`
 
-```bash
-./scripts/release-publish.sh 1.0.1 YOUR_KEY_ID
-```
-
-例如：
-
-```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
-./scripts/release-publish.sh 1.0.1 3842D1364CE6DA1A
-```
-
-说明：
-
-- 会先把项目版本切到待发布版本
-- 会临时把项目坐标从 `com.momao` 切到 `io.github.lmemory123`
-- 会先执行 `./scripts/run-real-tests.sh all`
-- `release` profile 会自动附带 `sources.jar`
-- `release` profile 会自动附带 `javadoc.jar`
-- `release` profile 会自动进行 GPG 签名
-- `central-publishing-maven-plugin` 会自动上传 bundle 到 Sonatype Central
-
-默认使用系统 `mvn`（按 `PATH` 解析）。
-
-如果你需要显式指定 Maven（路径或命令名）：
-
-```bash
-./scripts/release-publish.sh 1.0.1 3842D1364CE6DA1A /tmp/apache-maven-3.9.11/bin/mvn
-```
-
-### 6. 等待 Portal 发布完成
-
-当前配置是：
-
-- `autoPublish=true`
-- `waitUntil=published`
-
-所以命令会一直等到状态变成 `PUBLISHED`。
-
-成功日志通常类似：
+发布成功的标志是：
 
 ```text
-Uploaded bundle successfully, deploymentId: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Waiting until Deployment xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx is published
-Deployment xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx was successfully published
+[release] published version 1.1.0-RC3
 ```
 
-### 7. 打 Git Tag
+### 第 3 步：再打 Git tag
 
-例如：
+只有 **Central 成功之后** 才打 tag。
 
 ```bash
-./scripts/release-tag.sh 1.0.1 --push
+git tag -a v1.1.0-RC3 -m "Release 1.1.0-RC3"
+git push origin v1.1.0-RC3
 ```
 
-这会创建并推送 `v1.0.1`，随后 GitHub Actions 的 [release.yml](/Users/momao/dm/java/demo/valkey-demo/.github/workflows/release.yml) 会自动生成 GitHub Release。
+### 第 4 步：GitHub Release 自动生成
 
-### 8. 切回下一个开发版本
+仓库已经配置了：
 
-例如正式发完 `1.0.1` 后，切回：
-
-- `1.0.2-SNAPSHOT`
-
-这是推荐做法，避免后续开发继续停留在 release 版本号上。
-
-推荐命令：
-
-```bash
-./scripts/release-start-next.sh 1.0.2-SNAPSHOT
-```
-
-说明：
-
-- 会把版本切回下一个 `SNAPSHOT`
-- 会把项目坐标恢复为日常开发使用的 `com.momao`
-
-## RC 版本与正式版怎么发
-
-### RC 版本
-
-推荐命名：
-
-- `1.1.0-RC1`
-- `1.1.0-RC2`
-
-适用场景：
-
-- 大版本前的外部试用
-- 需要给别人提前验证 API / Starter / 索引治理行为
-- 想让别人能通过 Maven Central 直接接入测试
-
-注意事项：
-
-- `RC` 版本也是正式进入 Central 的不可变版本
-- `1.1.0-RC1` 一旦发布，不能覆盖
-- 如果有 bug，只能发 `1.1.0-RC2`
-- 不要把 `RC` 当成可以反复覆盖的临时版本
-
-推荐流程：
-
-1. 从 `x.y.z-SNAPSHOT` 切到 `x.y.z-RC1`
-2. 发布到 Central
-3. 收反馈
-4. 如需修复，发布 `RC2 / RC3`
-5. 最终确认后，发正式版 `x.y.z`
-
-### 正式版
-
-推荐命名：
-
-- `1.0.0`
-- `1.0.1`
-- `1.1.0`
-
-适用场景：
-
-- 对外正式宣发
-- README 示例依赖版本更新
-- GitHub Release / CHANGELOG 对外同步
-
-注意事项：
-
-- 正式版不能覆盖
-- 发布前必须确认版本号、文档、变更记录和依赖示例全部一致
-- 正式版发布后，下一步要尽快切回新的 `SNAPSHOT`
-
-## SNAPSHOT、RC、正式版的建议策略
-
-建议采用下面这套简单规则：
-
-- 日常开发：`x.y.z-SNAPSHOT`
-- 对外试发布：`x.y.z-RC1`
-- RC 修复：`x.y.z-RC2`
-- 正式发布：`x.y.z`
-- 正式版发布后继续开发：`x.y.(z+1)-SNAPSHOT`
-
-示例：
-
-- 当前开发中：`1.1.0-SNAPSHOT`
-- 第一轮候选版：`1.1.0-RC1`
-- 修复后再发：`1.1.0-RC2`
-- 最终正式版：`1.1.0`
-- 继续开发：`1.1.1-SNAPSHOT`
-
-## 发布时必须注意的坑
-
-### 1. Central 不可覆盖
-
-最重要的一条：
-
-- 版本一旦发布，不能重新上传覆盖
+- [release.yml](/Users/momao/dm/java/demo/valkey-demo/.github/workflows/release.yml)
 
 所以：
 
-- 不要在版本号还没确认时就急着发布
-- 不要把调试版直接发成正式版
+- 推送 `v1.1.0-RC3`
+- GitHub 会自动创建 Release
 
-### 2. Maven 4 兼容性
+也就是说，不需要手工去网页点 Release。
 
-当前本项目的实际发布经验表明：
+### 第 5 步：确认源码已经回到开发态
 
-- Maven 4.0.0-rc-5 下，`central-publishing-maven-plugin` 在本项目里没有稳定执行自动发布链
-- Maven 3.9.11 可以正常完成上传和发布
-
-所以当前版本发布建议：
-
-- **只用 Maven 3.9.x 发版**
-
-### 3. 搜索页存在延迟
-
-即使 Portal 已经显示 `PUBLISHED`：
-
-- `repo1.maven.org` 往往先可访问
-- `search.maven.org` 和 Maven Central 搜索页可能会延迟几分钟到几十分钟
-
-所以发布验证建议先看：
-
-- `https://repo1.maven.org/maven2/...`
-
-### 4. Example 模块不应该发布
-
-`valkey-query-test-example` 只是测试工程，不应作为正式依赖暴露给外部用户。
-
-当前已经做了排除，但发版前仍建议确认：
-
-- `maven.deploy.skip=true`
-- `skipPublishing=true`
-
-### 5. 版本示例要同步
-
-每次正式版或 RC 发版后，都建议同步：
-
-- `README.md`
-- `docs/快速开始.md`
-- `CHANGELOG.md`
-
-避免文档里还写着旧版本号。
-
-## 一套推荐命令
-
-### 发布 RC
+发布脚本结束后，再检查一次：
 
 ```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
-/tmp/apache-maven-3.9.11/bin/mvn -B -ntp clean test
-/tmp/apache-maven-3.9.11/bin/mvn -B -ntp -Prelease -Dgpg.keyname=YOUR_KEY_ID clean deploy
-git tag v1.1.0-RC1
-git push origin v1.1.0-RC1
+grep -n "<version>" pom.xml | head -n 1
 ```
 
-### 发布正式版
+应该仍然是：
+
+```xml
+<version>1.1.0-SNAPSHOT</version>
+```
+
+如果已经是 `SNAPSHOT`，而且 `git status` 没有已跟踪改动，就说明不需要再额外 commit。
+
+## 一份最短可执行命令
+
+以 `1.1.0-RC4` 为例：
 
 ```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
-/tmp/apache-maven-3.9.11/bin/mvn -B -ntp clean test
-/tmp/apache-maven-3.9.11/bin/mvn -B -ntp -Prelease -Dgpg.keyname=YOUR_KEY_ID clean deploy
-git tag v1.1.0
-git push origin v1.1.0
+cd /Users/momao/dm/java/demo/valkey-demo
+MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC4 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
+git tag -a v1.1.0-RC4 -m "Release 1.1.0-RC4"
+git push origin v1.1.0-RC4
 ```
 
-### 发完后切回开发版
+正式版也是同一套顺序，只是版本号改成：
 
 ```bash
-# 把 pom 版本改成下一个 SNAPSHOT
-git add .
-git commit -m "chore: start next development iteration"
-git push origin main
+1.1.0
 ```
 
-## 当前项目的实际发布记录
+## RC 和正式版怎么发
 
-`1.0.0` 的实际发布结果：
+推荐规则：
 
-- 使用 Maven：`3.9.11`
-- Deployment ID：`c7eca613-bba6-4906-9f79-9d9229f7af9e`
-- 最终状态：`PUBLISHED`
+- 日常开发：`x.y.z-SNAPSHOT`
+- 候选版：`x.y.z-RC1`
+- 候选修复：`x.y.z-RC2`
+- 再修复：`x.y.z-RC3`
+- 正式版：`x.y.z`
 
-这说明当前这套 `release` profile 和 Central 发布链路已经可复用。
+例如：
 
-## 发布辅助脚本
+- 当前开发：`1.1.0-SNAPSHOT`
+- 第一轮候选：`1.1.0-RC1`
+- 第二轮候选：`1.1.0-RC2`
+- 第三轮候选：`1.1.0-RC3`
+- 正式发布：`1.1.0`
 
-仓库已经提供了 3 个辅助脚本：
+原则只有一条：
 
-- `scripts/set-project-version.py`
-- `scripts/release-publish.sh`
-- `scripts/release-start-next.sh`
+- **Central 版本不可覆盖**
 
-### 只改版本号
+所以 RC 发错了，不能重传，只能继续发：
+
+- `RC2`
+- `RC3`
+- `RC4`
+
+## 这次真实踩过的坑
+
+### 1. 不要先打 tag
+
+这次就遇到过：
+
+- GitHub tag 和 Release 已经有了
+- 但 Central 上对应 RC 其实没有真正发布成功
+
+后果就是：
+
+- 外部看到 Release 以为版本已经可用
+- 但 Maven Central 拉不到
+
+所以顺序必须固定：
+
+1. Central 成功
+2. 再打 tag
+3. 再自动生成 GitHub Release
+
+### 2. Maven 4 不要拿来正式发
+
+这次实践里：
+
+- Maven 4 能做本地 `verify`
+- 但正式 `publish` 仍然不建议用 Maven 4
+
+结论：
+
+- 正式发布固定走 Maven 3.9.x
+
+### 3. `MAVEN_GPG_PASSPHRASE` 最稳是内联写法
+
+不要假设另一个终端 shell 环境会继承你的变量。  
+最稳的写法就是：
 
 ```bash
-python3 ./scripts/set-project-version.py 1.1.0-RC1
+MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh ...
 ```
 
-这个脚本只会更新：
+这样最不容易因为会话隔离出问题。
 
-- 根 `pom.xml` 的项目版本
-- 各子模块 `parent.version`
+### 4. Central 对 POM 元数据要求比本地严格
 
-不会修改：
+这次 `1.1.0-RC2` 失败的真实原因不是签名，也不是 token，而是：
 
-- `README.md`
-- `CHANGELOG.md`
-- 其它文档示例
+- 发布模块缺少显式 `name`
 
-### 一键发布 RC / 正式版
+Sonatype Central 直接拒绝发布。
 
-```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
-./scripts/release-publish.sh 1.1.0-RC1 3842D1364CE6DA1A
+所以现在已经固定要求：
+
+- 每个发布模块都要有自己的 `<name>`
+
+### 5. 本地有环境，不代表 CI fresh 容器也成立
+
+这次连续踩出了几类问题：
+
+- standalone bulk 测试 fresh 容器里没有索引
+- cluster CI 组网方式不稳
+- annotation processor 在 CI 的 reactor 解析方式和本地不同
+- 自定义 bundle 镜像最开始只有 `arm64`，CI 的 `linux/amd64` 拉不到
+
+结论：
+
+- 所有运行时功能，以真实 Valkey 验证结果为准
+- 发布前必须过 `./scripts/run-real-tests.sh all`
+
+### 6. GitHub Actions 镜像必须用当前项目基线
+
+不要把 CI 镜像随便改成别的公开 tag。  
+当前项目必须使用：
+
+```text
+ghcr.io/lmemory123/valkey-bundle:9.1.0
 ```
 
-或：
+而且它必须是：
 
-```bash
-export MAVEN_GPG_PASSPHRASE='你的 GPG 口令'
-./scripts/release-publish.sh 1.1.0 3842D1364CE6DA1A
-```
+- `linux/amd64`
+- `linux/arm64`
 
-默认使用系统 `mvn`（按 `PATH` 解析）。
+双架构 manifest。
 
-如果你想手动指定 Maven（路径或命令名）：
+## 常见问答
 
-```bash
-./scripts/release-publish.sh 1.1.0 3842D1364CE6DA1A /path/to/mvn
-```
+### 是先发 Maven 还是先发 GitHub？
 
-### 发版后切回开发版本
+先 Maven Central，后 GitHub tag / Release。
 
-```bash
-./scripts/release-start-next.sh 1.1.1-SNAPSHOT
-```
+### `release-publish.sh` 成功后为什么不一定还要 commit？
 
-然后再手工提交：
+因为这个脚本结束后，源码通常已经被切回 `SNAPSHOT`。  
+如果 `git status` 里没有已跟踪改动，就不需要再额外提交。
 
-```bash
-git add pom.xml */pom.xml
-git commit -m "chore: start 1.1.1-SNAPSHOT"
-```
+### 那些未跟踪文件要不要管？
+
+发版主线里不用管。  
+像下面这些一般都是本地分析垃圾文件，不要随手 `git add .`：
+
+- `*.xml`
+- `index.html`
+- `script.js`
+- `styles.css`
+- `qodana.yaml`
+
+### 如何确认真的发布成功？
+
+先看脚本输出，再看仓库页面：
+
+1. 终端里看到：
+   - `[release] published version ...`
+2. 再去 Maven Central 仓库目录看版本是否存在
+3. 最后再推 tag，等 GitHub Release 自动生成
+
+## 当前实际发布记录
+
+### `1.0.0`
+
+- 已成功发布到 Maven Central
+
+### `1.1.0-RC1`
+
+- GitHub tag / Release 存在
+- 但未成功进入 Maven Central
+
+### `1.1.0-RC2`
+
+- Sonatype deployment 失败
+- 原因是发布模块缺少显式 `name`
+
+### `1.1.0-RC3`
+
+- 已成功发布到 Maven Central
+- tag：`v1.1.0-RC3`
+- GitHub Release：自动生成

@@ -161,7 +161,7 @@ mvn clean install
 ## 版本与坐标
 
 - Maven Central 已发布稳定版：`io.github.lmemory123:*:1.0.0`
-- Maven Central 已发布候选版：`io.github.lmemory123:*:1.1.0-RC1`
+- Maven Central 已发布候选版：`io.github.lmemory123:*:1.1.0-RC3`
 - 当前仓库源码快照：`com.momao:*:1.1.0-SNAPSHOT`
 
 如果你是第一次接入：
