@@ -8,6 +8,7 @@
     </parent>
 
     <artifactId>valkey-query-glide-adapter</artifactId>
+    <name>Valkey Query Glide Adapter</name>
 
     <properties>
         <slf4j.version>2.0.7</slf4j.version>

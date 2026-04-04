@@ -8,6 +8,7 @@
     </parent>
 
     <artifactId>valkey-query-core</artifactId>
+    <name>Valkey Query Core</name>
 
     <dependencies>
         <dependency>

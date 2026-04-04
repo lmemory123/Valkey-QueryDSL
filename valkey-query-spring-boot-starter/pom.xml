@@ -8,6 +8,7 @@
     </parent>
 
     <artifactId>valkey-query-spring-boot-starter</artifactId>
+    <name>Valkey Query Spring Boot Starter</name>
 
     <dependencies>
         <dependency>

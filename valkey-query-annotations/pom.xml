@@ -8,4 +8,5 @@
     </parent>
 
     <artifactId>valkey-query-annotations</artifactId>
+    <name>Valkey Query Annotations</name>
 </project>
