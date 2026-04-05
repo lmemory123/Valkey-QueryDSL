@@ -6,7 +6,9 @@ import com.momao.valkey.annotation.StorageType;
 import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
 import com.momao.valkey.annotation.ValkeyIndexed;
+import com.momao.valkey.annotation.ValkeyNumeric;
 import com.momao.valkey.annotation.ValkeySearchable;
+import com.momao.valkey.annotation.ValkeyTag;
 import com.momao.valkey.annotation.ValkeyVector;
 import com.momao.valkey.core.NumericFieldBuilder;
 import com.momao.valkey.core.TagFieldBuilder;
@@ -266,9 +268,11 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         ValkeyId id = field.getAnnotation(ValkeyId.class);
         ValkeySearchable searchable = field.getAnnotation(ValkeySearchable.class);
         ValkeyIndexed indexed = field.getAnnotation(ValkeyIndexed.class);
+        ValkeyTag tag = field.getAnnotation(ValkeyTag.class);
+        ValkeyNumeric numeric = field.getAnnotation(ValkeyNumeric.class);
         ValkeyVector vector = field.getAnnotation(ValkeyVector.class);
 
-        int annotationCount = countNonNull(id, searchable, indexed, vector);
+        int annotationCount = countNonNull(id, searchable, tag, numeric, indexed, vector);
         if (annotationCount == 0) {
             return null;
         }
@@ -328,6 +332,8 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
             List<String> aliasSegments) {
         ValkeyId id = field.getAnnotation(ValkeyId.class);
         ValkeySearchable searchable = field.getAnnotation(ValkeySearchable.class);
+        ValkeyTag tag = field.getAnnotation(ValkeyTag.class);
+        ValkeyNumeric numeric = field.getAnnotation(ValkeyNumeric.class);
         ValkeyIndexed indexed = field.getAnnotation(ValkeyIndexed.class);
         ValkeyVector vector = field.getAnnotation(ValkeyVector.class);
 
@@ -340,6 +346,18 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         if (searchable != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, searchable.value(), field, storageType, propertySegments, aliasSegments);
             return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TEXT, searchable.sortable(), searchable.weight(), searchable.noStem(), 0, null, 0, 0);
+        }
+        if (tag != null) {
+            NameMapping mapping = resolveNameMapping(javaFieldName, tag.value(), field, storageType, propertySegments, aliasSegments);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TAG, false, 1.0d, false, 0, null, 0, 0);
+        }
+        if (numeric != null) {
+            if (!isNumericType(field.asType())) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "@ValkeyNumeric 仅支持数值字段", field);
+                return null;
+            }
+            NameMapping mapping = resolveNameMapping(javaFieldName, numeric.value(), field, storageType, propertySegments, aliasSegments);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.NUMERIC, numeric.sortable(), 1.0d, false, 0, null, 0, 0);
         }
         if (indexed != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, indexed.value(), field, storageType, propertySegments, aliasSegments);
@@ -487,6 +505,8 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         return field.getAnnotation(ValkeyId.class) != null
                 || field.getAnnotation(ValkeySearchable.class) != null
                 || field.getAnnotation(ValkeyIndexed.class) != null
+                || field.getAnnotation(ValkeyTag.class) != null
+                || field.getAnnotation(ValkeyNumeric.class) != null
                 || field.getAnnotation(ValkeyVector.class) != null;
     }
 
@@ -512,6 +532,10 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         return typeName.startsWith("java.util.List<")
                 || typeName.startsWith("java.util.Set<")
                 || typeName.startsWith("java.util.Collection<");
+    }
+
+    private boolean isStringType(TypeMirror type) {
+        return "java.lang.String".equals(type.toString());
     }
 
     private boolean isNestedObjectType(TypeMirror type) {

@@ -19,6 +19,9 @@ public class ValkeyQueryScannerRegistrar implements ImportBeanDefinitionRegistra
 
         Map<String, Object> attributes = importingClassMetadata.getAnnotationAttributes(EnableValkeyQuery.class.getName(), false);
         String[] basePackages = attributes == null ? new String[0] : (String[]) attributes.get("basePackages");
+        if ((basePackages == null || basePackages.length == 0) && attributes != null) {
+            basePackages = (String[]) attributes.get("value");
+        }
         if (basePackages == null || basePackages.length == 0) {
             basePackages = new String[]{ClassUtils.getPackageName(importingClassMetadata.getClassName())};
         }

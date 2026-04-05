@@ -191,7 +191,7 @@ class BaseValkeyRepositoryTests {
     }
 
     @Test
-    void buildsCreateCommandWithSuffixTrieForTextFields() {
+    void buildsCreateCommandForTextFieldsWithoutLegacySuffixTrieFlag() {
         StudentRepository repo = new StudentRepository();
 
         String[] command = repo.createCommand();
@@ -199,8 +199,8 @@ class BaseValkeyRepositoryTests {
         assertEquals("FT.CREATE", command[0]);
         assertEquals("idx:student", command[1]);
         assertTrue(List.of(command).contains("SCHEMA"));
-        assertTrue(List.of(command).contains("WITHSUFFIXTRIE"));
         assertTrue(List.of(command).contains("TEXT"));
+        assertTrue(!List.of(command).contains("WITHSUFFIXTRIE"));
     }
 
     @Test

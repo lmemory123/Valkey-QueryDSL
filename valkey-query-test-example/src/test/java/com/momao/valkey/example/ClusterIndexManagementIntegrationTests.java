@@ -93,7 +93,7 @@ class ClusterIndexManagementIntegrationTests {
                     "PREFIX", "1", prefix,
                     "SCHEMA",
                     "$.id", "AS", "id", "TAG", "SEPARATOR", ",",
-                    "$.title", "AS", "title", "TEXT", "WITHSUFFIXTRIE"
+                    "$.title", "AS", "title", "TEXT"
             });
 
             ValkeyQueryProperties properties = new ValkeyQueryProperties();
@@ -142,7 +142,7 @@ class ClusterIndexManagementIntegrationTests {
                     "PREFIX", "1", prefix,
                     "SCHEMA",
                     "$.id", "AS", "id", "TAG", "SEPARATOR", ",",
-                    "$.title", "AS", "title", "TEXT", "WITHSUFFIXTRIE"
+                    "$.title", "AS", "title", "TEXT"
             });
             awaitDiff(repository, "price");
 

@@ -3,8 +3,8 @@ package com.momao.valkey.example;
 import com.momao.valkey.annotation.DistanceMetric;
 import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
-import com.momao.valkey.annotation.ValkeyIndexed;
 import com.momao.valkey.annotation.ValkeySearchable;
+import com.momao.valkey.annotation.ValkeyTag;
 import com.momao.valkey.annotation.ValkeyVector;
 
 @ValkeyDocument(indexName = "idx:vector_item")
@@ -16,7 +16,7 @@ public class VectorItem {
     @ValkeySearchable
     private String title;
 
-    @ValkeyIndexed
+    @ValkeyTag
     private String category;
 
     @ValkeyVector(dimension = 3, distanceMetric = DistanceMetric.COSINE)

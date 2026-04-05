@@ -1,10 +1,10 @@
 package com.momao.valkey.example;
 
-import com.momao.valkey.annotation.ValkeyIndexed;
+import com.momao.valkey.annotation.ValkeyTag;
 
 public class Merchant {
 
-    @ValkeyIndexed
+    @ValkeyTag
     private String name;
 
     private String level;

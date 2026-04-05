@@ -108,7 +108,7 @@ public class Sku {
     @ValkeySearchable(weight = 2.5d, noStem = true)
     private String title;
 
-    @ValkeyIndexed(sortable = true)
+    @ValkeyNumeric(sortable = true)
     private Integer price;
 }
 ```
@@ -149,6 +149,13 @@ Page<Sku> page = skuRepository.queryChain()
 ### 高阶能力
 
 - [高阶能力](docs/高阶能力.md)
+
+### 接入减负
+
+- `@EnableValkeyQuery("...")` 支持 `value` 别名
+- `@EnableValkeyQuery` 无参时默认回退到启动类所在包
+- `saveBatch(...)` 是 `saveAll(...)` 的别名
+- 结构化字段推荐显式使用 `@ValkeyTag / @ValkeyNumeric`
 
 ### 工程化
 

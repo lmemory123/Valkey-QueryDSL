@@ -3,7 +3,8 @@ package com.momao.valkey.example;
 import com.momao.valkey.annotation.StorageType;
 import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
-import com.momao.valkey.annotation.ValkeyIndexed;
+import com.momao.valkey.annotation.ValkeyNumeric;
+import com.momao.valkey.annotation.ValkeyTag;
 
 @ValkeyDocument(indexName = "idx:media_asset", prefixes = {"media:"}, storageType = StorageType.JSON)
 public class MediaAsset {
@@ -11,16 +12,16 @@ public class MediaAsset {
     @ValkeyId
     private String id;
 
-    @ValkeyIndexed("producer_mark")
+    @ValkeyTag("producer_mark")
     private String producerMark;
 
-    @ValkeyIndexed("audit_status")
+    @ValkeyTag("audit_status")
     private String auditStatus;
 
-    @ValkeyIndexed("is_public")
+    @ValkeyTag("is_public")
     private Boolean isPublic;
 
-    @ValkeyIndexed(value = "play_count", sortable = true)
+    @ValkeyNumeric(value = "play_count", sortable = true)
     private Long playCount;
 
     public String getId() {

@@ -142,7 +142,7 @@ public abstract class BaseValkeyRepository<T> implements ValkeyRepository<T> {
         int failed = 0;
         for (int index = 0; index < items.size(); index += resolved.batchSize()) {
             List<BulkSaveItem<T>> batch = items.subList(index, Math.min(items.size(), index + resolved.batchSize()));
-            BatchOutcome batchOutcome = saveBatch(batch, resolved);
+            BatchOutcome batchOutcome = saveBatchInternal(batch, resolved);
             succeeded += batchOutcome.succeeded();
             failed += batchOutcome.failed();
             if (resolved.collectItemResults()) {
@@ -1104,7 +1104,6 @@ public abstract class BaseValkeyRepository<T> implements ValkeyRepository<T> {
             if (field.effectiveSortable()) {
                 command.add("SORTABLE");
             }
-            command.add("WITHSUFFIXTRIE");
             return;
         }
 
@@ -1258,7 +1257,7 @@ public abstract class BaseValkeyRepository<T> implements ValkeyRepository<T> {
         return BulkWriteItemResult.failure(operation, id, ValkeyErrorCode.QUERY_EXECUTION_ERROR.code(), exception.getMessage());
     }
 
-    private BatchOutcome saveBatch(List<BulkSaveItem<T>> batch, BulkWriteOptions options) {
+    private BatchOutcome saveBatchInternal(List<BulkSaveItem<T>> batch, BulkWriteOptions options) {
         List<CommandBatch<BulkSaveItem<T>>> commandBatch = new ArrayList<>(batch.size());
         List<BulkWriteItemResult> results = options.collectItemResults() ? new ArrayList<>() : List.of();
         int succeeded = 0;

@@ -3,7 +3,9 @@ package com.momao.valkey.example;
 import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
 import com.momao.valkey.annotation.ValkeyIndexed;
+import com.momao.valkey.annotation.ValkeyNumeric;
 import com.momao.valkey.annotation.ValkeySearchable;
+import com.momao.valkey.annotation.ValkeyTag;
 
 import java.util.List;
 
@@ -16,10 +18,10 @@ public class Sku {
     @ValkeySearchable(weight = 2.5d, noStem = true)
     private String title;
 
-    @ValkeyIndexed(sortable = true)
+    @ValkeyNumeric(sortable = true)
     private Integer price;
 
-    @ValkeyIndexed
+    @ValkeyTag
     private List<String> tags;
 
     @ValkeyIndexed

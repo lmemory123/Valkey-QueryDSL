@@ -3,8 +3,9 @@ package com.momao.valkey.example;
 import com.momao.valkey.annotation.StorageType;
 import com.momao.valkey.annotation.ValkeyDocument;
 import com.momao.valkey.annotation.ValkeyId;
-import com.momao.valkey.annotation.ValkeyIndexed;
+import com.momao.valkey.annotation.ValkeyNumeric;
 import com.momao.valkey.annotation.ValkeySearchable;
+import com.momao.valkey.annotation.ValkeyTag;
 
 @ValkeyDocument(value = "student", indexName = "idx:student", prefixes = {"student:"}, storageType = StorageType.HASH)
 public class Student {
@@ -15,19 +16,19 @@ public class Student {
     @ValkeySearchable(weight = 1.5d)
     private String name;
 
-    @ValkeyIndexed(sortable = true)
+    @ValkeyNumeric(sortable = true)
     private Integer age;
 
-    @ValkeyIndexed(sortable = true)
+    @ValkeyNumeric(sortable = true)
     private Double score;
 
     @ValkeySearchable("class_name")
     private String className;
 
-    @ValkeyIndexed
+    @ValkeyTag
     private String department;
 
-    @ValkeyIndexed
+    @ValkeyTag
     private String status;
 
     public Long getId() {

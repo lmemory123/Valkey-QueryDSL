@@ -53,7 +53,7 @@ class IndexManagementIntegrationTests {
                     "PREFIX", "1", prefix,
                     "SCHEMA",
                     "$.id", "AS", "id", "TAG", "SEPARATOR", ",",
-                    "$.title", "AS", "title", "TEXT", "WITHSUFFIXTRIE"
+                    "$.title", "AS", "title", "TEXT"
             }).get();
             System.out.println("[index-recreate] baseline-create=" + createResult);
             awaitDiff(updatedRepository, "price");
@@ -172,7 +172,7 @@ class IndexManagementIntegrationTests {
                     "PREFIX", "1", prefix,
                     "SCHEMA",
                     "$.id", "AS", "id", "TAG", "SEPARATOR", ",",
-                    "$.title", "AS", "title", "TEXT", "WITHSUFFIXTRIE"
+                    "$.title", "AS", "title", "TEXT"
             }).get();
             awaitDiff(repository, "price");
 

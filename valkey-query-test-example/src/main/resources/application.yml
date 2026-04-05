@@ -2,7 +2,7 @@ valkey:
   query:
     enabled: true
     username: ${VALKEY_USERNAME:}
-    password: ${VALKEY_PASSWORD:}
+    password: ${VALKEY_PASSWORD:memory1314}
     request-timeout: 5000
     connection-timeout: 5000
     observability:

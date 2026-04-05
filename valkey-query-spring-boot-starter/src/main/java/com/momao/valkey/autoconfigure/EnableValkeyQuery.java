@@ -14,5 +14,7 @@ import java.lang.annotation.Target;
 @Import(ValkeyQueryScannerRegistrar.class)
 public @interface EnableValkeyQuery {
 
+    String[] value() default {};
+
     String[] basePackages() default {};
 }
