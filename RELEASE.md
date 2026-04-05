@@ -11,6 +11,7 @@
 - **先发 Maven Central**
 - **Central 成功后再打 Git tag**
 - **Git tag 推上去后，GitHub Release 会自动生成**
+- **平时 push 到 `main` 只跑 CI 测试，不会自动打包发布**
 
 不要反过来做。  
 如果先打 tag、先出 GitHub Release，而 Central 最后失败，外部看到的版本状态就会错乱。
@@ -102,6 +103,18 @@ MAVEN_GPG_PASSPHRASE='你的口令' /Users/momao/dm/path/java/apache-maven-3.9.1
 不接受只跑 mock 或纯模型测试就发版。
 
 ## 标准发布顺序
+
+先把边界说清楚：
+
+- `push main`：只触发 [ci.yml](/Users/momao/dm/java/demo/valkey-demo/.github/workflows/ci.yml)，验证编译和真实环境测试
+- `push vX.Y.Z / vX.Y.Z-RC* tag`：才触发 [release.yml](/Users/momao/dm/java/demo/valkey-demo/.github/workflows/release.yml)，自动创建 GitHub Release
+- 发布到 Maven Central：只会在你手工执行 [`scripts/release-publish.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-publish.sh) 时发生
+
+也就是说：
+
+- 平时提交到 `main` 不会自动发版
+- 不会自动上传 Maven Central
+- 不会因为普通提交就生成 GitHub Release
 
 ### 第 1 步：确认当前是开发态
 

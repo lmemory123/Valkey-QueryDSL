@@ -209,6 +209,12 @@ mvn clean install
 
 完整流程见 [发布指南](/Users/momao/dm/java/demo/valkey-demo/RELEASE.md)。
 
+补充说明：
+
+- 普通 `push main` 只会触发 CI 测试，不会自动打包发布
+- 只有手工执行 [`scripts/release-publish.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-publish.sh) 才会发布到 Maven Central
+- 只有推送 `v*` tag 才会触发 GitHub Release 自动生成
+
 ## 开源协议
 
 本项目采用 [MIT License](LICENSE)。
