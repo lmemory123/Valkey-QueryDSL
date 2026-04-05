@@ -20,7 +20,7 @@ class ExistingIndexInfoTests {
                 StorageType.JSON,
                 List.of("sku:"),
                 List.of(
-                        SchemaField.tag("id", ",", true),
+                        SchemaField.tag("id", ",", false),
                         SchemaField.text("title", 2.5d, true, false),
                         SchemaField.numeric("price", true),
                         SchemaField.tag("tags", "tags[*]", ",", false),
@@ -34,7 +34,7 @@ class ExistingIndexInfoTests {
                 "prefixes", new Object[]{"sku:"}
         },
                 "attributes", new Object[]{
-                new Object[]{"identifier", "$.id", "attribute", "id", "type", "TAG", "SORTABLE"},
+                new Object[]{"identifier", "$.id", "attribute", "id", "type", "TAG"},
                 new Object[]{"identifier", "$.title", "attribute", "title", "type", "TEXT", "WEIGHT", "2.5", "NOSTEM"},
                 new Object[]{"identifier", "$.price", "attribute", "price", "type", "NUMERIC", "SORTABLE"},
                 new Object[]{"identifier", "$.tags[*]", "attribute", "tags", "type", "TAG", "SEPARATOR", ","},
@@ -53,7 +53,7 @@ class ExistingIndexInfoTests {
                 "idx:sku",
                 StorageType.JSON,
                 List.of("sku:"),
-                List.of(SchemaField.tag("id", ",", true)));
+                List.of(SchemaField.tag("id", ",", false)));
 
         Object[] response = new Object[]{
                 "index_definition", new Object[]{
@@ -61,7 +61,7 @@ class ExistingIndexInfoTests {
                 "prefixes", new Object[]{"sku:"}
         },
                 "attributes", new Object[]{
-                new Object[]{"identifier", "id", "attribute", "id", "type", "TAG", "SORTABLE"}
+                new Object[]{"identifier", "id", "attribute", "id", "type", "TAG"}
         }
         };
 
@@ -76,7 +76,7 @@ class ExistingIndexInfoTests {
                 "idx:sku",
                 StorageType.JSON,
                 List.of("sku:"),
-                List.of(SchemaField.tag("id", ",", true)));
+                List.of(SchemaField.tag("id", ",", false)));
 
         Object[] response = new Object[]{
                 "index_definition", new Object[]{
@@ -84,7 +84,7 @@ class ExistingIndexInfoTests {
                 "prefixes", new Object[]{"legacy:"}
         },
                 "attributes", new Object[]{
-                new Object[]{"identifier", "$.legacyId", "attribute", "id", "type", "TAG", "SORTABLE"}
+                new Object[]{"identifier", "$.legacyId", "attribute", "id", "type", "TAG"}
         }
         };
 

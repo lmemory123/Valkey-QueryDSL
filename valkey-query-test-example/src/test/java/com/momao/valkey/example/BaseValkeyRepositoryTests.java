@@ -213,6 +213,7 @@ class BaseValkeyRepositoryTests {
         assertTrue(tokens.contains("$.tags"));
         assertTrue(!tokens.contains("$.tags[*]"));
         assertTrue(tokens.contains("SEPARATOR"));
+        assertTrue(!String.join(" ", tokens).contains("$.id AS id TAG SEPARATOR , SORTABLE"));
     }
 
     @Test
@@ -972,7 +973,7 @@ class BaseValkeyRepositoryTests {
                     StorageType.JSON,
                     List.of("sku:"),
                     List.of(
-                            SchemaField.tag("id", ",", true),
+                            SchemaField.tag("id", ",", false),
                             SchemaField.text("title", 2.5d, true, false),
                             SchemaField.numeric("price", true),
                             SchemaField.tag("tags", "tags[*]", ",", false),

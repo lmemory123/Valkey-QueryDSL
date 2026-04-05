@@ -335,7 +335,7 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
 
         if (id != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, "", field, storageType, propertySegments, aliasSegments);
-            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TAG, true, 1.0d, false, 0, null, 0, 0);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), FieldType.TAG, false, 1.0d, false, 0, null, 0, 0);
         }
         if (searchable != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, searchable.value(), field, storageType, propertySegments, aliasSegments);
@@ -344,7 +344,7 @@ public class ValkeyQueryProcessor extends AbstractProcessor {
         if (indexed != null) {
             NameMapping mapping = resolveNameMapping(javaFieldName, indexed.value(), field, storageType, propertySegments, aliasSegments);
             FieldType fieldType = inferFieldType(field.asType());
-            return new FieldInfo(mapping.alias(), mapping.jsonPath(), fieldType, indexed.sortable(), 1.0d, false, 0, null, 0, 0);
+            return new FieldInfo(mapping.alias(), mapping.jsonPath(), fieldType, fieldType == FieldType.TAG ? false : indexed.sortable(), 1.0d, false, 0, null, 0, 0);
         }
         if (vector != null) {
             if (storageType != StorageType.JSON) {

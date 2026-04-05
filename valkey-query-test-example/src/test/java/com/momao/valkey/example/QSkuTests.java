@@ -36,7 +36,7 @@ class QSkuTests {
         assertEquals(StorageType.JSON, SkuQuery.METADATA.storageType());
         assertEquals(List.of("sku:"), SkuQuery.METADATA.prefixes());
         assertEquals(List.of(
-                new SchemaField("id", "id", FieldType.TAG, true, 1.0d, false, ","),
+                new SchemaField("id", "id", FieldType.TAG, false, 1.0d, false, ","),
                 new SchemaField("title", "title", FieldType.TEXT, false, 2.5d, true, ","),
                 new SchemaField("price", "price", FieldType.NUMERIC, true, 1.0d, false, ","),
                 new SchemaField("tags", "tags[*]", FieldType.TAG, false, 1.0d, false, ","),

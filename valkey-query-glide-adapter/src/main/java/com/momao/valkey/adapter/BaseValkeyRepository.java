@@ -1101,7 +1101,7 @@ public abstract class BaseValkeyRepository<T> implements ValkeyRepository<T> {
             if (field.noStem()) {
                 command.add("NOSTEM");
             }
-            if (field.sortable()) {
+            if (field.effectiveSortable()) {
                 command.add("SORTABLE");
             }
             command.add("WITHSUFFIXTRIE");
@@ -1112,14 +1112,11 @@ public abstract class BaseValkeyRepository<T> implements ValkeyRepository<T> {
             command.add("TAG");
             command.add("SEPARATOR");
             command.add(field.separator());
-            if (field.sortable()) {
-                command.add("SORTABLE");
-            }
             return;
         }
 
         command.add("NUMERIC");
-        if (field.sortable()) {
+        if (field.effectiveSortable()) {
             command.add("SORTABLE");
         }
     }

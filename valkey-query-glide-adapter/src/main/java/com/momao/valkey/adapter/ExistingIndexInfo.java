@@ -212,6 +212,9 @@ final class ExistingIndexInfo {
         if ("TAG".equals(type) && identifier != null && identifier.endsWith("[*]")) {
             identifier = identifier.substring(0, identifier.length() - 3);
         }
+        if ("TAG".equals(type)) {
+            sortable = false;
+        }
         return new ExistingFieldInfo(alias, identifier, type, sortable, weight, noStem, separator, dimension, distanceMetric, m, efConstruction);
     }
 
@@ -303,7 +306,7 @@ final class ExistingIndexInfo {
                     field.fieldName(),
                     identifier,
                     field.type().name(),
-                    field.sortable(),
+                    field.effectiveSortable(),
                     field.weight(),
                     field.noStem(),
                     field.separator(),

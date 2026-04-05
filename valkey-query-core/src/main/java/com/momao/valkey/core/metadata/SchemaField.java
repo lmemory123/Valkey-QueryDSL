@@ -14,6 +14,10 @@ public record SchemaField(
     VectorOptions vectorOptions
 ) {
 
+    public boolean effectiveSortable() {
+        return type != FieldType.TAG && sortable;
+    }
+
     public SchemaField {
         jsonPath = jsonPath == null || jsonPath.isEmpty() ? fieldName : jsonPath;
         separator = separator == null || separator.isEmpty() ? "," : separator;
@@ -47,7 +51,7 @@ public record SchemaField(
     }
 
     public static SchemaField tag(String fieldName, String jsonPath, String separator, boolean sortable) {
-        return new SchemaField(fieldName, jsonPath, FieldType.TAG, sortable, 1.0d, false, separator);
+        return new SchemaField(fieldName, jsonPath, FieldType.TAG, false, 1.0d, false, separator);
     }
 
     public static SchemaField numeric(String fieldName, boolean sortable) {

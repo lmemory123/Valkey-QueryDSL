@@ -29,7 +29,7 @@ class QMediaAssetTests {
         assertEquals(StorageType.JSON, MediaAssetQuery.METADATA.storageType());
         assertEquals(List.of("media:"), MediaAssetQuery.METADATA.prefixes());
         assertEquals(List.of(
-                new SchemaField("id", "id", FieldType.TAG, true, 1.0d, false, ","),
+                new SchemaField("id", "id", FieldType.TAG, false, 1.0d, false, ","),
                 new SchemaField("producer_mark", "producerMark", FieldType.TAG, false, 1.0d, false, ","),
                 new SchemaField("audit_status", "auditStatus", FieldType.TAG, false, 1.0d, false, ","),
                 new SchemaField("is_public", "isPublic", FieldType.TAG, false, 1.0d, false, ","),
