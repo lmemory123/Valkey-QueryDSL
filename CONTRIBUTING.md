@@ -55,6 +55,12 @@ CI uses the same runtime validation baseline image as the local project:
 
 - `ghcr.io/lmemory123/valkey-bundle:9.1.0`
 
+## Runtime Validation Rules
+
+- Do not treat Mockito or pure model tests as runtime correctness proof.
+- No runtime feature counts as delivered until the affected real Valkey suites pass.
+- Local existing indexes or data do not prove fresh CI containers will also work.
+
 ## Pull Request Checklist
 
 Every pull request should include:

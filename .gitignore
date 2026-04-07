@@ -37,7 +37,22 @@ out/
 .vscode/
 
 ### others ###
-doc/
+my-docs/doc/
 target/
 .serena/
 .mvn/
+my-docs/
+
+### local review / analysis noise ###
+/.descriptions.xml
+/.xml
+/*.xml
+!/pom.xml
+/index.html
+/script.js
+/styles.css
+/qodana.yaml
+/.gitattributes
+/.github/copilot-instructions.md
+/.github/workflows/qodana_code_quality.yml
+/docs/用户视角审查.md

@@ -38,18 +38,23 @@
 
 ## 核心能力
 
+基础能力：
+
 - 编译期生成 `XXXQuery`
 - 支持 `StorageType.JSON` 和 `StorageType.HASH`
-- 支持 `list`、`page`、`one`、`count`
+- 支持 `list / page / one / count`
 - 支持链式查询 `ValkeyQueryChain`
-- 支持基础聚合链 `ValkeyAggregateChain`
-- 支持 Facet 快捷链 `ValkeyFacetChain`
-- 支持多字段独立 Facet 结果 `FacetResults`
-- 支持聚合结果映射 `AggregateResult.mapRows(...)`
-- 支持 `AggregateExpressions` 轻量表达式 DSL
 - 支持集合字段和嵌套对象
 - 支持 Spring Boot 自动建索引
-- 支持 Glide 运行时适配
+
+高阶能力：
+
+- 基础聚合链 `ValkeyAggregateChain`
+- Facet 快捷链 `ValkeyFacetChain`
+- 多字段独立 Facet 结果 `FacetResults`
+- 聚合结果映射 `AggregateResult.mapRows(...)`
+- `AggregateExpressions` 轻量表达式 DSL
+- 向量检索
 
 ## 模块结构
 
@@ -65,32 +70,6 @@
   Spring Boot 自动配置
 - `valkey-query-test-example`
   示例工程与真实测试
-
-## 生态背景
-
-Valkey 本身已经不是一个边缘实验项目，而是一个增长很快、生态越来越完整的开源基础设施项目。截止 2026 年 3 月 12 日，可以参考这些公开指标：
-
-- Valkey 官方 GitHub 仓库约 `25.1k` stars
-- `valkey-glide` 官方仓库约 `705` stars
-- Valkey GitHub 组织约 `1.4k` followers
-- 官方 Docker Hub 镜像 `valkey/valkey` 已达到 `50M+` pulls
-- 官方网站明确写明项目由 Linux Foundation 支持，并强调 “Open Source, Forever”
-
-从官方博客披露的信息看，Valkey 在成立一年左右时，企业参与方数量已经从 `22` 增长到 `47`，背后有 AWS、Google Cloud、Oracle、Alibaba、Huawei、Tencent、Canonical、Percona 等贡献者持续投入。
-
-说明：
-
-- 官方公开页面没有给出统一、可稳定引用的“每月下载量”口径
-- 这里优先采用 GitHub Stars、Docker Hub pulls 和官方生态说明作为参考指标
-
-参考来源：
-
-- [valkey-io/valkey](https://github.com/valkey-io/valkey)
-- [valkey-io/valkey-glide](https://github.com/valkey-io/valkey-glide)
-- [Valkey GitHub Organization](https://github.com/valkey-io)
-- [Docker Hub: valkey/valkey](https://hub.docker.com/r/valkey/valkey)
-- [Valkey 官网](https://valkey.io/)
-- [Valkey Blog: Celebrating Valkey's First Year and Looking Ahead](https://valkey.io/blog/celebrating-valkeys-first-year-and-looking-ahead/)
 
 ## 一个最小示例
 
@@ -133,6 +112,7 @@ Page<Sku> page = skuRepository.queryChain()
 ### 快速开始
 
 - [快速开始](docs/快速开始.md)
+- [最小示例](docs/最小示例.md)
 - [依赖接入](docs/依赖接入.md)
 - [依赖说明](docs/依赖说明.md)
 
@@ -145,6 +125,7 @@ Page<Sku> page = skuRepository.queryChain()
 
 - [注解参考](docs/注解参考.md)
 - [配置与治理](docs/配置与治理.md)
+- [拓扑支持矩阵](docs/拓扑支持矩阵.md)
 
 ### 高阶能力
 
@@ -159,6 +140,7 @@ Page<Sku> page = skuRepository.queryChain()
 
 ### 工程化
 
+- [常见问题排障](docs/常见问题排障.md)
 - [真实环境测试手册](docs/真实环境测试手册.md)
 - [测试分层说明](docs/测试分层说明.md)
 - [发布指南](RELEASE.md)
@@ -166,20 +148,6 @@ Page<Sku> page = skuRepository.queryChain()
 ## 示例工程
 
 - `valkey-query-test-example`
-
-## 测试原则
-
-- 不以 Mockito 结果作为正确性结论
-- 优先使用本地 `docker` 中的真实 Valkey 做验证
-- standalone、read_write_split、cluster 都以真实集成测试为准
-
-## 真实验证红线
-
-- 没有真实 Valkey 验证兜底的运行时能力，不算真正交付
-- 本地已有索引、已有数据、已有拓扑状态，不代表 CI 的 fresh 容器也会成立
-- 任何 Repository、索引治理、拓扑路由、批量写、聚合、Facet、向量查询改动，都必须补真实环境验证
-- 当前 GitHub Actions 使用的 bundle 基线镜像为 `ghcr.io/lmemory123/valkey-bundle:9.1.0`
-- 这份镜像是当前项目真实验证基线的一部分，不应随意替换为其他公开镜像
 
 ## 本地构建
 
@@ -190,7 +158,7 @@ mvn clean install
 ## 版本与坐标
 
 - Maven Central 已发布稳定版：`io.github.lmemory123:*:1.0.0`
-- Maven Central 已发布候选版：`io.github.lmemory123:*:1.1.0-RC3`
+- Maven Central 已发布候选版：`io.github.lmemory123:*:1.1.0-RC5`
 - 当前仓库源码快照：`com.momao:*:1.1.0-SNAPSHOT`
 
 如果你是第一次接入：
@@ -214,6 +182,17 @@ mvn clean install
 - 普通 `push main` 只会触发 CI 测试，不会自动打包发布
 - 只有手工执行 [`scripts/release-publish.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-publish.sh) 才会发布到 Maven Central
 - 只有推送 `v*` tag 才会触发 GitHub Release 自动生成
+
+## 生态背景
+
+如果你关心 Valkey 生态成熟度，可以继续看这些来源：
+
+- [valkey-io/valkey](https://github.com/valkey-io/valkey)
+- [valkey-io/valkey-glide](https://github.com/valkey-io/valkey-glide)
+- [Valkey GitHub Organization](https://github.com/valkey-io)
+- [Docker Hub: valkey/valkey](https://hub.docker.com/r/valkey/valkey)
+- [Valkey 官网](https://valkey.io/)
+- [Valkey Blog: Celebrating Valkey's First Year and Looking Ahead](https://valkey.io/blog/celebrating-valkeys-first-year-and-looking-ahead/)
 
 ## 开源协议
 

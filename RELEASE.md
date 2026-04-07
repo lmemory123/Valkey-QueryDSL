@@ -23,7 +23,7 @@
 - 开发态坐标：`com.momao:*:1.1.0-SNAPSHOT`
 - 发布态坐标：`io.github.lmemory123:*:<release-version>`
 - 稳定版：`1.0.0`
-- 当前候选版：`1.1.0-RC3`
+- 当前候选版：`1.1.0-RC5`
 - GitHub Actions 真实验证镜像：`ghcr.io/lmemory123/valkey-bundle:9.1.0`
 - 推荐 Maven：`3.9.x`
 - 当前可用发布 key：`8ACEA513E5F728CC`
@@ -134,16 +134,16 @@ grep -n "<version>" pom.xml | head -n 1
 
 这是第一优先级，必须先做。
 
-示例，发布 `1.1.0-RC3`：
+示例，发布 `1.1.0-RC5`：
 
 ```bash
 cd /Users/momao/dm/java/demo/valkey-demo
-MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC3 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
+MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC5 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
 ```
 
 这个脚本会自动做这些事：
 
-- 把版本切到 `1.1.0-RC3`
+- 把版本切到 `1.1.0-RC5`
 - 把 `groupId` 从 `com.momao` 临时切到 `io.github.lmemory123`
 - 先跑 `./scripts/run-real-tests.sh all`
 - 用 `release` profile 打包、签名、上传
@@ -153,7 +153,7 @@ MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC3 8ACEA
 发布成功的标志是：
 
 ```text
-[release] published version 1.1.0-RC3
+[release] published version 1.1.0-RC5
 ```
 
 ### 第 3 步：再打 Git tag
@@ -161,8 +161,8 @@ MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC3 8ACEA
 只有 **Central 成功之后** 才打 tag。
 
 ```bash
-git tag -a v1.1.0-RC3 -m "Release 1.1.0-RC3"
-git push origin v1.1.0-RC3
+git tag -a v1.1.0-RC5 -m "Release 1.1.0-RC5"
+git push origin v1.1.0-RC5
 ```
 
 ### 第 4 步：GitHub Release 自动生成
@@ -173,7 +173,7 @@ git push origin v1.1.0-RC3
 
 所以：
 
-- 推送 `v1.1.0-RC3`
+- 推送 `v1.1.0-RC5`
 - GitHub 会自动创建 Release
 
 也就是说，不需要手工去网页点 Release。
@@ -196,13 +196,13 @@ grep -n "<version>" pom.xml | head -n 1
 
 ## 一份最短可执行命令
 
-以 `1.1.0-RC4` 为例：
+以 `1.1.0-RC5` 为例：
 
 ```bash
 cd /Users/momao/dm/java/demo/valkey-demo
-MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC4 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
-git tag -a v1.1.0-RC4 -m "Release 1.1.0-RC4"
-git push origin v1.1.0-RC4
+MAVEN_GPG_PASSPHRASE='你的口令' ./scripts/release-publish.sh 1.1.0-RC5 8ACEA513E5F728CC /Users/momao/dm/path/java/apache-maven-3.9.14/bin/mvn
+git tag -a v1.1.0-RC5 -m "Release 1.1.0-RC5"
+git push origin v1.1.0-RC5
 ```
 
 正式版也是同一套顺序，只是版本号改成：
@@ -226,7 +226,7 @@ git push origin v1.1.0-RC4
 - 当前开发：`1.1.0-SNAPSHOT`
 - 第一轮候选：`1.1.0-RC1`
 - 第二轮候选：`1.1.0-RC2`
-- 第三轮候选：`1.1.0-RC3`
+- 候选版可按实际连续递增，例如：`1.1.0-RC3 / RC4 / RC5`
 - 正式发布：`1.1.0`
 
 原则只有一条：
@@ -370,8 +370,8 @@ ghcr.io/lmemory123/valkey-bundle:9.1.0
 - Sonatype deployment 失败
 - 原因是发布模块缺少显式 `name`
 
-### `1.1.0-RC3`
+### `1.1.0-RC5`
 
 - 已成功发布到 Maven Central
-- tag：`v1.1.0-RC3`
+- tag：`v1.1.0-RC5`
 - GitHub Release：自动生成
