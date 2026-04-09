@@ -1,7 +1,5 @@
 # Valkey QueryDSL
 
-项目名称：`Valkey QueryDSL`
-
 `Valkey QueryDSL` 是一个面向 Java 17 与 Spring Boot 的 Valkey Search 类型安全查询框架，目标是用编译期生成的查询对象替代手写 `FT.SEARCH` 字符串。
 
 它通过：
@@ -12,21 +10,6 @@
 - Spring Boot Starter 自动完成扫描、连接与索引初始化
 
 把 Valkey Search 的底层字符串查询，收口成更稳定的 Java API。
-
-## 项目缘起
-
-这个项目不是从“大而全框架设计”出发，而是来自一个非常具体的开发体验问题。
-
-平时会更关注那些对开源社区更友好、治理更透明、生态更健康的基础设施项目。接触 Valkey 之后，很快就会被它 “Open Source, Forever” 的定位吸引，因为这类项目更适合长期学习、二次开发和实际落地。
-
-但在真正写项目时，也会碰到一个很现实的问题：Valkey Search 的底层能力没有问题，原生接口也足够强，但直接面向 Java 业务开发时并不算顺手。尤其在下面这些场景里，使用成本会明显上升：
-
-- 查询条件需要手工拼接，容易写错
-- 索引定义和实体模型容易分离
-- 集合字段、嵌套对象、分页和排序的调用不够统一
-- Spring Boot 接入时需要重复写连接、扫描和建索引逻辑
-
-所以这个项目的目标很明确：不是重新发明一个数据库客户端，而是给 Valkey Search 补上一层更适合 Java / Spring Boot 业务项目的 QueryDSL 和 Repository 抽象，让“实体定义、查询构造、索引元数据、运行时执行”串成一套完整工作流。
 
 ## 解决的问题
 
@@ -182,17 +165,6 @@ mvn clean install
 - 普通 `push main` 只会触发 CI 测试，不会自动打包发布
 - 只有手工执行 [`scripts/release-publish.sh`](/Users/momao/dm/java/demo/valkey-demo/scripts/release-publish.sh) 才会发布到 Maven Central
 - 只有推送 `v*` tag 才会触发 GitHub Release 自动生成
-
-## 生态背景
-
-如果你关心 Valkey 生态成熟度，可以继续看这些来源：
-
-- [valkey-io/valkey](https://github.com/valkey-io/valkey)
-- [valkey-io/valkey-glide](https://github.com/valkey-io/valkey-glide)
-- [Valkey GitHub Organization](https://github.com/valkey-io)
-- [Docker Hub: valkey/valkey](https://hub.docker.com/r/valkey/valkey)
-- [Valkey 官网](https://valkey.io/)
-- [Valkey Blog: Celebrating Valkey's First Year and Looking Ahead](https://valkey.io/blog/celebrating-valkeys-first-year-and-looking-ahead/)
 
 ## 开源协议
 
